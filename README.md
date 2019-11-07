@@ -1,2 +1,2 @@
 # QuInt-Optofieldcharge-Python
- Converrsion of QuInt-Optofieldcharge written in Matlab
+ Python Converrsion of QuInt-Optofieldcharge originally written in Matlab
