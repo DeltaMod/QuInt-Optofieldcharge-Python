@@ -16,6 +16,12 @@ from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 from matplotlib.figure import Figure
 import numpy as np
 
+#Define Colours to use for certain components
+PlotBG   = 'ghostwhite'
+ButtonBG = 'WhiteSmoke'
+ButtonABG = 'azure'
+LabelBG  = 'aliceblue'
+VarBG    = LabelBG 
 
 SIMSEL = ['Simple Photoinduced Charge',
                     'Dispersion and Photoinduced Charge',
@@ -59,25 +65,22 @@ VARSTORE = {'Sim Select':0,'Plot Select':0,'F_x':0,'F_y':0}
 
         
 class FFAST_MPEGUI:
-    LABEL_TEXT = [
-        'Showing:',
-        'Actually, this is our second GUI.',
-        'We made it more interesting...',
-        '...by making this label interactive.',
-        'Go on, click on it again.']
+    LABEL_TEXT = ['FFAST-MPEG']
     def __init__(self, master):
         self.master = master 
         master.title('Khurgin Py-UI')
         XDIM = 1280
         YDIM = 720
         root.geometry('{}x{}'.format(XDIM,YDIM))
+        root.config(bg='aliceblue')
+        #Creating Graph Frame
         self.GCanvas = tk.Frame(root, bg='white', width=YDIM, height=YDIM, relief = 'raised') # , 
         self.GCanvas.grid(row = 0, column = 0,  sticky='nwse')
-        
-        self.GFrame = tk.Frame(root,width=XDIM-YDIM,height=YDIM)
+        #Creating Variables Frame
+        self.GFrame = tk.Frame(root,bg='ghostwhite',width=XDIM-YDIM,height=YDIM)
         self.GFrame.grid(row = 0, column = 1)
         self.GFrame.bind('<Configure>',self.MaintainAspect)
-
+        #Setting Weights of all root relevant columms to be 1
         tk.Grid.rowconfigure(root, 0, weight=1)
         tk.Grid.columnconfigure(root, 0, weight=1)
         tk.Grid.columnconfigure(root, 1, weight=1)
@@ -86,47 +89,34 @@ class FFAST_MPEGUI:
         ##Convert Button
         self.Convert_Button = tk.Button(self.GFrame, text='Convert', command=self.convert)
         self.Convert_Button.grid(row = 1,column = 1,sticky='nwse')
-        
-#        ##DDSIM Listing
-#        self.DDSIM = tk.Listbox(self.GFrame)
-#        for n in range(len(SIMSEL)):
-#            self.DDSIM.insert(n+1, SIMSEL[n])
-#        self.DDSIM.selection_set( first = 0)
-#        self.DDSIM.grid(row = 0,column = 0,sticky='w')
-#
-#         ##DDPLT Listing
-#        self.DDPLT = tk.Listbox(self.GFrame)
-#        for n in range(len(PLTSEL[self.DDSIM.curselection()[0]])):
-#            self.DDPLT.insert(n+1, PLTSEL[self.DDSIM.curselection()[0]][n])
-#        self.DDPLT.grid(row = 0,column =1 ,sticky='w')
-#        self.DDSIM.selection_set( first = self.DDSIM.curselection()[0])
-        
-        
-
       
-        #DDSIM Menu Example
+        #Defining StringVar for SIMSEL Options Menu
         self.SSV = tk.StringVar(root)
         self.SSV.set(SIMSEL[VARSTORE['Sim Select']])
+        #Generating the actual OptionsMenu
         self.DDSIMS= tk.OptionMenu(self.GFrame, self.SSV, *SIMSEL)
-        tk.Label(self.GFrame, text="Select a Simulation",relief='flat').grid(row = 9, column = 0)
+        tk.Label(self.GFrame, text="Select a Simulation",relief='flat',bg=LabelBG).grid(row = 9, column = 0)
         self.DDSIMS.grid(row = 10, column =0)
-        self.DDSIMS.config(width = SelBoxLen)
+        self.DDSIMS.config(width = SelBoxLen,bg=ButtonBG,activebackground =ButtonABG)
+        self.DDSIMS["menu"].config(bg=ButtonABG)
         def PLT_DDGen(self):
+            #Defining StringVar for PLTSEL Options Menu
             self.PSV = tk.StringVar(root)
             self.PSV.set(PLTSEL[int(self.SSV.get()[0])][VARSTORE['Plot Select']])
+            #Generating the actual OptionsMenu
             self.DDPLT= tk.OptionMenu(self.GFrame, self.PSV, *PLTSEL[int(self.SSV.get()[0])])
-            tk.Label(self.GFrame, text="Select a Plot",relief ='flat' ).grid(row = 9, column = 1)
+            tk.Label(self.GFrame, text="Select a Plot",relief ='flat',bg=LabelBG ).grid(row = 9, column = 1)
             self.DDPLT.grid(row = 10, column =1)
-            self.DDPLT.config(width = SelBoxLen)
-            
+            self.DDPLT.config(width = SelBoxLen,bg=ButtonBG,activebackground =ButtonABG)
+            self.DDPLT["menu"].config(bg=ButtonABG)
             
         PLT_DDGen(self)   
         
         def SIM_DDChange(*args):
             VARSTORE['Sim Select'] = int(self.SSV.get()[0])
             VARSTORE['Plot Select'] = 0
-            self.DDPLT.destroy()
-            PLT_DDGen(self)  
+            self.DDPLT.destroy() #Destroy old OptionsMenu so it can be re-created (there might be a better way to do this)
+            PLT_DDGen(self)      #Re generate PLT OptionsMenu
         def PLT_DDChange(*args):
             VARSTORE['Plot Select'] = int(self.PSV.get()[0])
             
