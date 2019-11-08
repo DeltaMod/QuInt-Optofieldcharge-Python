@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 import numpy as np
 
 #Define Colours to use for certain components
+rootBG   = 'aliceblue'
 PlotBG   = 'ghostwhite'
 ButtonBG = 'WhiteSmoke'
 ButtonABG = 'azure'
