@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-FFTD - A function transfer from Matlab
+OFunc - A function transfer from Matlab
 """
 
 import numpy as np
@@ -43,7 +43,7 @@ def Dispersion_Factor(PHI,w,w_0):
         NoteCode('Converted w from list to array - try to use np.array in the future to speed up your computation')
     try:
         if len(PHI) <= 3:
-            NoteCode('Running with suboptimal parameters - Your PHI only contains coefficients up to the GVD in phi_2 - consider adding a TOD term phi_3')
+            NoteCode('Running with suboptimal parameters - Your PHI only contains coefficients up to phi_'+str(len(PHI)-1)+' - consider adding a TOD term phi_3')
         
         #Actually the part that does it - it's pretty neat if you ask me (it used to be 5 lines of code)
         Phiw = []
@@ -153,7 +153,7 @@ class FFTD(object):
         
     def ftt(self,w,A,w_0,Phi,Tht):
          # Setting up variables for storage and calculation 
-          N = self.N                     # Length of series
+         N = self.N                     # Length of series
          self.w    = self.x              # Frequency Axis (iff type = ftt)
          self.w_0  = w_0                 # Centre Frequency
          self.Ew     = A/max(A) #Note: The current Ew equation includes the phi component, so you must change that to apply a different dispersion.
