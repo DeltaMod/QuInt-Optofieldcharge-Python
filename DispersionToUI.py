@@ -57,113 +57,57 @@ if UIRUN == 0:
     Delt1  = -100*10**(-15); Delt2 = 100*10**(-15)
     
     Delt = np.linspace(Delt1,Delt2,N)
-
+    
+"""
+Old code that needs to be moved into the "Photoinduced only" simulation
 ## New a_fun code @(t,T,w_0x) that is more universal and can be integrated
-fun_a = @(t,T,w_0x) (exp(-2*log(2).*t.^2/T^2).*cos(w_0x*t));
-a = fun_a(t,T_x,w_0x);
+a =  (exp(-2*log(2).*t.^2/T^2).*cos(w_0x*t))
+a = fun_a(t,T_x,w_0x)
 
 #We define a new function handle a_fun2n1 to help us integrate it over time with the new ^2n+1
-fun_a2n1 = @(t,T,n,w_0x) (exp(-2*log(2).*t.^2/T.^2).*cos(w_0x*t)).^(2*n+1);
-
-#Integrate for relevant values of n
+fun_a2n1 = @(t,T,n,w_0x) (exp(-2*log(2).*t.^2/T.^2).*cos(w_0x*t)).^(2*n+1)
 
 for n = 1:ORD
-a2(n) = w_0x*trapz(t,fun_a2n1(t,T_x,n,w_0x));
+a2(n) = w_0x*trapz(t,fun_a2n1(t,T_x,n,w_0x))
 end
-
-
-## NEW CODE BLOCK - Let's generate some ultrashort pulses:
-#study [8] states that ultrashort pulses can be defined in: 
-# Time Domain     : E(t) = E_0(t)*e^(i*(w_0x*t - psi(t)))
-# Frequency Domain: E(w) = E_0(w)*e^(-i*phi(w))          (This is a fourier transform of the above)
-# E_0(w) = Amplitude, phi(w) = phase
-
-# According to
-# "https://www.newport.com/n/the-effect-of-dispersion-on-ultrashort-pulses"
-# we can simplify E(t) to instead exclude the complex conjugate (c.c.)
-
-fun_Et = @(A_t,t,t_0,T,w_0x,theta) sqrt( A_t.*exp(-log(2).*((2*(t-t_0))/(T)).^2)).*exp(-1i*(w_0x*(t-t_0)+theta)); #+ c.c.
-fun_Ew = @(A_w,w,W,w_0x,psi) sqrt( A_w.*exp(-log(2).*((2*(w-w_0x))  /(W)).^2)).*exp(-1i.*psi);
-                                   
-# Function for phase, theta = phase shift, t = time, set to ensure the phase starts at 0                                   
-#fun_theta = @(theta,t) theta*pi() - t(1)*w_0x + t*w_0x;
-fun_theta = @(theta) theta*pi(); #When you find out how to define the chirp, the group velocity dispersion and other factors like the TOD, come back to this.
-                                   
-#Note: fun_phiw describes phi(w-w_0x), spectral phase. It has several
-#components that influence where the pulse ends up.
-
-## Determining  SiO2.phi manually ##
-#Note: k = 2*pi/lambda, and w = 2*pi()*f, f = c/lambda => w = 2*pi*c/lambda  => lambda = 2*pi*c/w   => k = 2*pi*lambda/(2*pi*c)
-#Note that vg = c/(n(w)* w dn/dw) where n(w)*w dn/dw = ng.
-#Differentiating the lambda version using : syms lambda; diff(symbols, lambda)
-# k_lambda    =  2*pi()/lambda
-# k_lambda'   = -(2*pi)/lambda^2
-# k_lambda''  =  (4*pi)/lambda^3
-# k_lambda''' = -(12*pi)/lambda^4
-#But I am not so sure how this, in itself, would help?
-# k_w on the other hand is different?:
-#k_w = w/vp =  w/= ; 
-
-fun_k = @(w,vp) w/vp;
-fun_klambda = @(lambda) 2*pi()/lambda;
-
-k(1) = w_0x/SiO2.GD;
-k(2) = c/SiO2.GD;
-#online sources state that k' = 1/vg where vg = c/n_g
-
-SiO2.phi = [SiO2.CD SiO2.GD SiO2.GVD SiO2.TOD 1]; 
-
-fun_phiw = @(phi_0, phi_1, phi_2, phi_3,w,w_0x) phi_0                 +...    #phi_0 is Carrier Envelope Phase - Values of pi() 
-                                               phi_1.*((w-w_0x))      +...    #phi_1 is the Group Delay 
-                                               phi_2.*((w-w_0x).^2)/2 +...    #phi_2 is the Group Velocity Dispersion GVD
-                                               phi_3.*((w-w_0x).^3)/6 ;       #phi_3 is the Third Order Dispersion 
-              
-
-#We have to think for a moment about what the phase phi actually is. If we
-#have an oscillation at w_0x = something, that means the phase must complete
-#on the same order as the frequency.
-#Note: We use T and W here, but in most documentation these are: \delta t and \delta \omega 
+"""
 
 ## Define separate Et and Ew series based on input variables
-theta = fun_theta(0);
-phiw = fun_phiw(SiO2.phi(1),SiO2.phi(2),SiO2.phi(3),SiO2.phi(4),w,w_0x);
+theta = OFunc.Phase_Offset(0)
+phiw = OFunc.Dispersion_Factor(SiO2.phi,w,w_0x)
 
-Et = fun_Et(A_t,t,t_0,T_x,w_0x,theta); 
-Ew = fun_Ew(A_w,w,W_x,w_0x,phiw);
-#Note: These are related to each other by: \delta w*\delta t =4ln(2), that is W*T = 4*log(2) which means we get: W  = 4*log(2)/T;
+Et = OFunc.TDGE(A_t,t,t_0,T_x,w_0x,theta) 
+Ew = OFunc.FDGE(A_w,w,W_x,w_0x,phiw)
+
+#Note: These are related to each other by: \delta w*\delta t =4ln(2), that is W*T = 4*log(2) which means we get: W  = 4*log(2)/T
 #T = (Ncycx*2*pi())/w_0x => W = 4*log(2)*w_0x/(Ncycx*2*pi()) 
-PROGBAR = waitbar(0.1,'Calculating $E_t(t)$'); #pause(0.2);
 
 
 ## if PlotSelect == "Non Fourier Et(t)"
-# plot(t-t_0,real(Et)); xlabel('time [s]'); ylabel('E_t(t)'); fprintf(['\n','Plotting [',PlotSelect{1},']']);
+# plot(t-t_0,real(Et)); xlabel('time [s]'); ylabel('E_t(t)'); fprintf(['\n','Plotting [',PlotSelect{1},']'])
 # end
-
-
-
 
 ##-- Time to test conversions between the two --##
 ## -- E_t -> FFT = E_w -> Band Filter + IFFT = E_t -- ## 
 
-waitbar(0.2,PROGBAR,'Calculating fft($E_t$)');#pause(0.2);
+Estr = OFunc.FFTD(t,Et,w_0x,SiO2.phi) #This generates:  | Estr.ttt.Et & Estr.ttt.t | Estr.ttt.Ew & Estr.ttf.w | Estr.ttt.Etdisp & Estr.ttt.tdisp|
+Estr.ttt(theta)
 
-Estr = FFTD(t,Et,w_0x,'ttt',SiO2.phi,0); #This generates:  | Estr.ttt.Et & Estr.ttt.t | Estr.ttt.Ew & Estr.ttf.w | Estr.ttt.Etdisp & Estr.ttt.tdisp|
-
-##
-
+#%%
 
 ##Bandpass Filter
-if BPF > 0
-waitbar(0.3,PROGBAR,'Applying Bandpass Filter')
-for n = 1:length(Estr.ttt.Ew)
-    if abs(Estr.ttt.Ew(n))<max(abs(Estr.ttt.Ew))/BPF
-Estr.ttt.Ew(n) = 0;
-    end
-end
-Estr2 = FFTD(Estr.ttt.w,Estr.ttt.Ew,w_0x,'ftt',SiO2.phi,0);
-Estr.ttt.Etdisp = Estr2.ftt.Etdisp; Estr.ttt.tdisp = Estr2.ftt.tdisp; 
-clear Estr2
-end
+if BPF > 0:
+
+    for n = 1:length(Estr.ttt.Ew)
+        if abs(Estr.ttt.Ew(n))<max(abs(Estr.ttt.Ew))/BPF
+            Estr.ttt.Ew(n) = 0
+ 
+
+    Estr2 = FFTD(Estr.wf,Estr.Ew,w_0,SiO2.phi,0)
+    Estr2.ftt(theta)
+    Estr = Estr2
+    del(Estr2)
+
 
 
 ## if PlotSelect == "E_t FFT Plot"
@@ -171,7 +115,6 @@ end
 #end
 ##
 
-waitbar(0.3,PROGBAR,'Calculating Dispersed $E_t(t)$');
 
 ## if PlotSelect == "E_t Final Applied Dispersion"
 #plot(Estr.ttt.tdisp,real(Estr.ttt.Etdisp));grid on; fprintf(['\n','Plotting [',PlotSelect{1},']']);
@@ -181,20 +124,18 @@ waitbar(0.3,PROGBAR,'Calculating Dispersed $E_t(t)$');
 #After we get back Etifft, we now have a new value for a(t), and thus need to calculate a new <a^2n+1>
 
 ## -- Calculating <a^2n+1> for a dispersed pulse -- ##
-waitbar(0.4,PROGBAR,'Calculating Dispersed Photoinduced Charge');
-for n = 1:ORD
-    a2disp(n) = w_0x*trapz(Estr.ttt.tdisp,real(Estr.ttt.Etdisp).^(2*n+1));
-end
+
+a2disp = OFunc.Vec_Pot_Mom(w_0x,Estr.tf,Estr.Etf,ORD) 
 ## -- Equation 17 -- ##
 #fun_Q2 = @(F_0x,F_a,a2disp,Aeff) eps_0*F_0x.*(F_0x/F_a).^2.*(a2disp(1) +(F_0x/F_a).^2*a2disp(2)...
-#                                   +(F_0x/F_a).^4*a2disp(3)+(F_0x/F_a).^6*a2disp(4)+(F_0x/F_a).^8*a2disp(5))*Aeff;
-#Q = fun_Q2(F_0,F_a,a2disp,Aeff);
-Q = fun_Q(F_0,F_a,a2disp,Aeff,ORD);  
+#                                   +(F_0x/F_a).^4*a2disp(3)+(F_0x/F_a).^6*a2disp(4)+(F_0x/F_a).^8*a2disp(5))*Aeff
+#Q = fun_Q2(F_0,F_a,a2disp,Aeff)
+Q = fun_Q(F_0,F_a,a2disp,Aeff,ORD)  
 
 
-Etf2n(1,:) = real(Estr.ttt.Etdisp);
+Etf2n(1,:) = real(Estr.ttt.Etdisp)
 for n = 1:4
-Etf2n(n+1,:) = real(Estr.ttt.Etdisp).^(2*n+1);
+Etf2n(n+1,:) = real(Estr.ttt.Etdisp).^(2*n+1)
 end
 ## if PlotSelect == "E_t(t)^2n+1 After Dispersion"
 #plot(Estr.ttt.tdisp,Etf2n(:,:),'LineWidth',1.3)
@@ -202,10 +143,10 @@ end
 
 
 ## if PlotSelect == "Post Dispersion Photoinduced Charge"
-#plot(F_0,abs(Q));
+#plot(F_0,abs(Q))
 #figure(66)
 #hold on
-#plot(F_0,abs(Q));
+#plot(F_0,abs(Q))
 #grid on
 #xlabel('Optical Field [Vm^-^1]')
 #ylabel('Photinduced Charge [C]')
@@ -231,13 +172,13 @@ end
 #                   '\\phi_3 = ', num2str(SiO2.phi(4),'#.4g'),'\n']);
                
 ## Alternative Code ##
-Eftt  = FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0);
+Eftt  = FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0)
 
  
 
 ## Alternate Code
-waitbar(0.45,PROGBAR,'Calculating $E_w(t)$');
-Estw = FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0);
+waitbar(0.45,PROGBAR,'Calculating $E_w(t)$')
+Estw = FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0)
 ## if PlotSelect ==  "E_w IFFT Dispersion"
 #plot(Estw.ftt.tdisp,real(Estw.ftt.Etdisp)); grid on; fprintf(['\n','Plotting [',PlotSelect{1},']']);
 #end
@@ -273,33 +214,33 @@ Estw = FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0);
                                                      
 
 
-N_Delt = Delt2 - Delt1 + 1;
-Deltn  = linspace(Delt1,Delt2,N_Delt);
-E_td = FFTD(t,fun_Et(A_t,t,t_0,T_x,w_0x,0),w_0x,'ttt',SiO2.phi,0);
-E_ti = FFTD(t,fun_Et(A_t,t,t_0,T_y,w_0y,0),w_0y,'ttt',SiO2.phi,0);
-Delt = linspace(Delt1*dt,Delt2*dt,N_Delt);
-waitbar(0.5+0.5*0/N,PROGBAR,['Integrating to determine $\left<a^2n+1\right>$','   n/N$\_$Delt = ',num2str(0),'/',num2str(N_Delt)]);
+N_Delt = Delt2 - Delt1 + 1
+Deltn  = linspace(Delt1,Delt2,N_Delt)
+E_td = FFTD(t,fun_Et(A_t,t,t_0,T_x,w_0x,0),w_0x,'ttt',SiO2.phi,0)
+E_ti = FFTD(t,fun_Et(A_t,t,t_0,T_y,w_0y,0),w_0y,'ttt',SiO2.phi,0)
+Delt = linspace(Delt1*dt,Delt2*dt,N_Delt)
+waitbar(0.5+0.5*0/N,PROGBAR,['Integrating to determine $\left<a^2n+1\right>$','   n/N$\_$Delt = ',num2str(0),'/',num2str(N_Delt)])
 
 for n = 1:N_Delt
 if rem(n,round(N_Delt/100,-1)) == 0
-waitbar(0.5+0.5*n/N_Delt,PROGBAR,['Integrating to determine $\left<a^2n+1\right>$','   n/N$\_$Delt = ',num2str(n),'/',num2str(N_Delt)]);
+waitbar(0.5+0.5*n/N_Delt,PROGBAR,['Integrating to determine $\left<a^2n+1\right>$','   n/N$\_$Delt = ',num2str(n),'/',num2str(N_Delt)])
 #if N/n = A*N/100 1000/200
 end
-E_td.ttt.Etdshift = circshift(E_td.ttt.Etdisp,Deltn(n)); E_td.ttt.tdshift = circshift(E_td.ttt.tdisp,Deltn(n)); 
-Edires = E_td.ttt.Etdshift+E_ti.ttt.Etdisp;
+E_td.ttt.Etdshift = circshift(E_td.ttt.Etdisp,Deltn(n)); E_td.ttt.tdshift = circshift(E_td.ttt.tdisp,Deltn(n)) 
+Edires = E_td.ttt.Etdshift+E_ti.ttt.Etdisp
 
 for m = 1:ORD
-    a2harm(n,m) = w_0x*trapz(E_td.ttt.tdisp,real(Edires).^(2*m+1));
-    a2pol(n,m)  = w_0x*trapz(E_td.ttt.tdisp,real(E_td.ttt.Etdshift).*real(E_ti.ttt.Etdisp).^(2*m)); 
+    a2harm(n,m) = w_0x*trapz(E_td.ttt.tdisp,real(Edires).^(2*m+1))
+    a2pol(n,m)  = w_0x*trapz(E_td.ttt.tdisp,real(E_td.ttt.Etdshift).*real(E_ti.ttt.Etdisp).^(2*m)) 
 end
 
 
-QHarm(n) = fun_Q(F_0(end),F_a,a2harm(n,:),Aeff,ORD);
-QPol(n)  = fun_QDelt(F_0x,F_0y,F_a,a2pol(n,:),Aeff,ORD);
+QHarm(n) = fun_Q(F_0(end),F_a,a2harm(n,:),Aeff,ORD)
+QPol(n)  = fun_QDelt(F_0x,F_0y,F_a,a2pol(n,:),Aeff,ORD)
  
 ## In case you want animation of the transformation here :)
 
-anim = 1;
+anim = 1
 if anim == 0
     figure(67); clf;
 subplot(3,1,1)
@@ -342,39 +283,39 @@ evalin('base','UIGraphPlotter')
 
 
 
-THESISGRAPHS = 0;
+THESISGRAPHS = 0
 if THESISGRAPHS == 1 #This is for when you wish to reproduce graphs for your paper, keep these constant so you don't need to type them in again
 
 ## Plotting different phi_n dispersion graphs, we do this to show exactly how the different components interact
-fg = figure(6); clf; FIG.Name = 'E_w->E_t For Different \phi_n'; fg.Position = [550 270 700 520];
+fg = figure(6); clf; FIG.Name = 'E_w->E_t For Different \phi_n'; fg.Position = [550 270 700 520]
      #Note, the last number helps 
 for n = 5
-    DISP{1} = [0 0 0 0 0]; 
-    DISP{2} = [pi 0 0 0 1];
-    DISP{3} = [0 20*(10^-15) 0 0 2];
-    DISP{4} = [0 0 25*(10^-15)^2 0 3];
-    DISP{5} = [0 0 0 60*(10^-15)^3 4];
-DISPFAC = DISP{n};
+    DISP{1} = [0 0 0 0 0] 
+    DISP{2} = [pi 0 0 0 1]
+    DISP{3} = [0 20*(10^-15) 0 0 2]
+    DISP{4} = [0 0 25*(10^-15)^2 0 3]
+    DISP{5} = [0 0 0 60*(10^-15)^3 4]
+DISPFAC = DISP{n}
 DISPDISP = [pi 20 25 60]
-Estr2 = FFTD(t,Et,w_0x,'ttt',DISPFAC,0);
+Estr2 = FFTD(t,Et,w_0x,'ttt',DISPFAC,0)
 if n == 1
-PHITEXT{1} =      ['$\Phi = 0$'];
+PHITEXT{1} =      ['$\Phi = 0$']
 elseif n == 2
-    PHITEXT{n} =      ['$\phi_',num2str(n-2),' = ', num2str(DISPDISP(n-1),'%.4g'), '$'];
+    PHITEXT{n} =      ['$\phi_',num2str(n-2),' = ', num2str(DISPDISP(n-1),'%.4g'), '$']
 else
-    PHITEXT{n} =      ['$\phi_',num2str(n-2),' = ', num2str(DISPDISP(n-1),'%.4g'), '$ fs$^',num2str(n-1),' $'];
+    PHITEXT{n} =      ['$\phi_',num2str(n-2),' = ', num2str(DISPDISP(n-1),'%.4g'), '$ fs$^',num2str(n-1),' $']
 end
 
-cla reset;
-plot(Estr2.ttt.tdisp/10^-15,real(Estr2.ttt.Etdisp)); fprintf(['\n','Plotting [',PlotSelect{1},']']);
+cla reset
+plot(Estr2.ttt.tdisp/10^-15,real(Estr2.ttt.Etdisp)); fprintf(['\n','Plotting [',PlotSelect{1},']'])
 legend(PHITEXT{n},'Location','northwest')
 xlabel('Time [fs]')
 ylabel('Amplitude')
 grid on
 set(gca,'fontsize', 20)
 set(gca,'Box','on')
-LEFT = 0.13; BOTTOM = 0.15; RIGHT = 0.02; TOP = 0.05;
-InSet = [LEFT BOTTOM RIGHT TOP]; #Fontsize 12
+LEFT = 0.13; BOTTOM = 0.15; RIGHT = 0.02; TOP = 0.05
+InSet = [LEFT BOTTOM RIGHT TOP] #Fontsize 12
 set(gca, 'Position', [InSet(1:2), 1-InSet(1)-InSet(3), 1-InSet(2)-InSet(4)])
 xticks('auto')
 Legg=legend(PHITEXT{n},'Location','northwest')

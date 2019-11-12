@@ -56,10 +56,25 @@ def Dispersion_Factor(PHI,w,w_0):
             ErrCode('TypeError: PHI is type int, make sure that PHI = np.array(phi0,phi1,phi2,phi3)')
         else:
            raise
-        
+     
+def Vec_Pot_Mom(w_0x,t,Et,Order):
+    """
+    A function that calculates the wave asymmetry, and consequently the vector potential momenta, of any input 
+    Usage:  Vec_Pot_Mom(w_0x,t,Et,Order) = a2disp(1:order) = w_0x*trapz(Estr.ttt.tdisp,real(Estr.ttt.Etdisp).^(2*1:order+1));
+    """
+    VPM = [w_0x*np.trapz(t,np.real(Et)**(2*n+1)) for n in range(Order)]
+    return(VPM)
+    
 def TDGE(A_t,t,t_0,T,w_0x,theta):
     """
-    Time Domain Gaussian Envelope
+    ==Time Domain Gaussian Envelope==
+    study [8] states that ultrashort pulses can be defined in: 
+        Time Domain     : E(t) = E_0(t)*e^(i*(w_0x*t - psi(t)))
+        Frequency Domain: E(w) = E_0(w)*e^(-i*phi(w))          (This is a fourier transform of the above)
+        E_0(w) = Amplitude, phi(w) = phase
+    According to: "https://www.newport.com/n/the-effect-of-dispersion-on-ultrashort-pulses"
+    we can simplify E(t) to instead exclude the complex conjugate (c.c.)
+    np.sqrt( A_t*np.exp(-np.log(2)*((2*(t-t_0))/(T))**2))*np.exp(-1.j*(w_0x*(t-t_0)+theta)) + c.c
     """
     return(np.sqrt( A_t*np.exp(-np.log(2)*((2*(t-t_0))/(T))**2))*np.exp(-1.j*(w_0x*(t-t_0)+theta)))
 
@@ -80,7 +95,7 @@ class FFTD(object):
     #  
     #
     #----------------------------------USAGE----------------------------------#
-    #                     self = FFTD.xxx(x,y,w_0,'type',Phi,Theta)
+    #                     self = FFTD.xxx(x,y,w_0,Phi)
     # x is your x axis (time or frequency axis, select a proper type to match)
     #
     # y is your intensity/amplitude 
@@ -151,12 +166,12 @@ class FFTD(object):
                                      '\\phi_2 = '+str(self.phi[2])+'\n'+
                                      '\\phi_3 = '+str(self.phi[3])+'\n')
         
-    def ftt(self,w,A,w_0,Phi,Tht):
+    def ftt(self,Tht):
          # Setting up variables for storage and calculation 
          N = self.N                     # Length of series
-         self.w    = self.x              # Frequency Axis (iff type = ftt)
-         self.w_0  = w_0                 # Centre Frequency
-         self.Ew     = A/max(A) #Note: The current Ew equation includes the phi component, so you must change that to apply a different dispersion.
+         self.w      = self.x           # Frequency Axis (iff type = ftt)
+         A           = self.y 
+         self.Ew     = A/max(A)          #Note: The current Ew equation includes the phi component, so you must change that to apply a different dispersion.
          w1 = self.w[0]                  # Highest Freq
          #w2 = self.w[-1]                 # Lowest Freq
          #Dw   = w2 - w1                  # Frequency Difference
@@ -164,9 +179,8 @@ class FFTD(object):
          Dt_w = 2*np.pi/w1               # Determining Max time interval from frequency
          #dt_w = 2*np.pi/w2               # Determining Min time interval from frequency
          t_w1 = -Dt_w/2                  # Determining time axis start    
-         t_w2 =  Dt_w/2                  # Determining time axis end variables
-         self.phi  = Phi                                     # Store phi_n terms
-         self.phiw = Dispersion_Factor(Phi,self.w,self.w_0)  # Get the dispersion factor 
+         t_w2 =  Dt_w/2                  # Determining time axis end variable
+         self.phiw = Dispersion_Factor(self.phi,self.w,self.w_0)  # Get the dispersion factor 
          self.theta = Phase_Offset(Tht)                     # Get the phase offset
         
     #     ## Calculate post dispersion delay, and how many units to shift the pulse by to center it 
@@ -187,41 +201,42 @@ class FFTD(object):
                                       '\\phi_2 = '+str(self.phi[2])+'\n'+
                                       '\\phi_3 = '+str(self.phi[3])+'\n')
     
-    def ttt(self,t,I,w_0,Phi,Tht):
+    def ttt(self,Tht):
          # Setting up variables for storage and calculation 
-         N = len(t)                      # Length of series
-         self.t     = t                   # Time Axis
-         self.t_0   = np.mean(self.t)     # Centre Time Axis (mean of axis)
-         self.Et = I/max(I)              # Normalise E(t) to a(t)
+         N = self.N                      # Length of series
+         self.t    = self.x              # Time Axis
+         self.t_0  = np.mean(self.t)     # Centre Time Axis (mean of axis)
+         I         = self.y
+         self.Eti  = I/max(I)             # Normalise E(t) to a(t)
          t1         = self.t[0]           # Start Time
          t2         = self.t[-1]          # End Time 
          Dt         = (t2-t1)             # Sampling interval
          dt         = Dt/N                # Smallest Time interval
          w_t1       = 2*np.pi/Dt           # Min Frequency from time  
          w_t2       = 2*np.pi/dt           # Max Frequency from time
-         self.phi   = Phi                                     # Store phi_n terms
-         self.phiw  = Dispersion_Factor(Phi,self.w,self.w_0)  # Get    the dispersion factor 
-         self.theta = Phase_Offset(Tht)                      # Get the phase offset
         
          ## Calculate post dispersion delay, and how many units to shift the pulse by to center it 
          tD         = self.phi[1]                                # The added time delay by phi_2
-         tcirc      = round(N*(round(self.phi[1]/self.Dt)-self.phi[1]/Dt)) 
+         tcirc      = int(N*(round(self.phi[1]/Dt)-self.phi[1]/Dt)) 
         
          ## ----- E_t -> E_w ----- ##
          # Perform fft and add dispersion
-         self.Etf   = np.fft.fft(self.Et)          # fft with no padding
+         self.Etf   = np.fft.fft(self.Eti)          # fft with no padding
          self.wf    = np.linspace(w_t2,w_t1,N)     # Defining the frequency axis - it's "backwards" because the fft goes high to low freq
-         #self.Etf   = self.Etf*exp(-1.j*self.phiw) #Apply dispersion
+         self.phiw  = Dispersion_Factor(self.phi,self.wf,self.w_0)    # Get the dispersion factor 
+         self.theta = Phase_Offset(Tht)                              # Get the phase offset
+         self.Etf   = self.Etf*np.exp(-1.j*self.phiw)                   #Apply dispersion
         
          ## ---- E_w -> E_t ---- ##
+         
          self.Etf   = np.flip((np.fft.ifft(self.Etf)))     #We flip Ew before ifft, because otherwise it is backwards when transformed back
          Dt = 2*np.pi/self.wf[-1]                  #Extract max time
-         #dt_w = 2*np.pi/self.wf[1];                #Extract min time    
+         #dt_w = 2*np.pi/self.wf[1];               #Extract min time
          t1 =   -self.t_0                          # set t1
          t2 = Dt-self.t_0;                         # set t2
-         self.tf = np.linspace(t1,t2,self.N);        # Get time axis (idea case => same as input)
-         self.Etfc = np.roll(self.Etf,tcirc);       # Central pulse
-         self.tfc  = self.tf + tD;          # Time shifted axis - for centralised pulse
+         self.tf = np.linspace(t1,t2,self.N);      # Get time axis (idea case => same as input)
+         self.Etfc = np.roll(self.Etf,tcirc);      # Central pulse
+         self.tfc  = self.tf + tD;                 # Time shifted axis - for centralised pulse
          # Save text of which dispersion factor was used, useful for legend entries
          self.PHITEXT     =         ('\\phi_0 = '+str(self.phi[0])+'\n'+
                                      '\\phi_1 = '+str(self.phi[1])+'\n'+
