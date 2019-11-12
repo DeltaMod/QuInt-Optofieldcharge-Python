@@ -60,7 +60,9 @@ PLTSELLen = len(max(PLTSEL, key=len))
 SIMSELLen = len(max(SIMSEL, key=len))
 SelBoxLen = max([PLTSELLen,SIMSELLen])
 
-VARSTORE = {'Sim Select':0,'Plot Select':0,'F_x':0,'F_y':0}
+VAR = {'Sim Select':0,'Plot Select':0,
+            'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_0x':0, 'F_0y':0,
+            't1':0, 't2':0, 'L':0, 'Aeff':0, 'BPF':0,  'TDn':0, 'Delt1':0, 'Delt2':0,  'ORD':0,  'N':0}
 
 
 
@@ -74,62 +76,245 @@ class FFAST_MPEGUI:
         YDIM = 720
         root.geometry('{}x{}'.format(XDIM,YDIM))
         root.config(bg='aliceblue')
-        #Creating Graph Frame
-        self.GCanvas = tk.Frame(root, bg='white', width=YDIM, height=YDIM, relief = 'raised') # , 
-        self.GCanvas.grid(row = 0, column = 0,  sticky='nwse')
-        #Creating Variables Frame
-        self.GFrame = tk.Frame(root,bg='ghostwhite',width=XDIM-YDIM,height=YDIM)
-        self.GFrame.grid(row = 0, column = 1)
-        self.GFrame.bind('<Configure>',self.MaintainAspect)
-        #Setting Weights of all root relevant columms to be 1
         tk.Grid.rowconfigure(root, 0, weight=1)
         tk.Grid.columnconfigure(root, 0, weight=1)
-        tk.Grid.columnconfigure(root, 1, weight=1)
-        
-                
-        ##Convert Button
-        self.Convert_Button = tk.Button(self.GFrame, text='Convert', command=self.convert)
-        self.Convert_Button.grid(row = 1,column = 1,sticky='nwse')
+        tk.Grid.columnconfigure(root, 2, weight=1)
+        tk.Grid.rowconfigure(root, 1, weight=1)
+        tk.Grid.rowconfigure(root, 2, weight=1)
       
+        
+        #Creating Graph Frame
+        self.GCanvas = tk.Frame(root, bg='white', width=YDIM, height=YDIM, relief = 'raised') # , 
+        self.GCanvas.grid(row = 0, column = 0, rowspan=4,  sticky='nwse')
+       
+        #Creating Preset Box Frame
+        self.PSFrame = tk.Frame(root,bg='ghostwhite')
+        self.PSFrame.grid(row = 0, column = 1,sticky='nswe')
+        
+        
+        #Creating Editbox Frame
+        self.EBFrame = tk.Frame(root,bg='ghostwhite')
+        self.EBFrame.grid(row = 1, column = 1,sticky = 'nwe')
+        self.EBFrame.bind('<Configure>',self.MaintainAspect)
+        
+        
+        #Creating Simulation Box Frame
+        self.RSFrame = tk.Frame(root,bg='ghostwhite')
+        self.RSFrame.grid(row = 2, column = 1,sticky='nwe')
+        #Setting Weights of all root relevant columms to be 1
+       
+                 
+
+        
+         #%% Listing all of the location and span variables used to cotrol the appearance of the UI
+         #In the future, consider instead creating a matrix that uses exec to automatically generate these boxes based upon some matrix storage, like:
+         #A = [Name,Type,Frame,text,relief,anchor,bg,row,column,columnspan,sticky]
+        #Preset Frame
+        #Variable Frame
+        ROWf_0x   = 4;  COLf_0x   = 2; DEntSpan = 3
+        ROWf_0y   = 4;  COLf_0y   = 6; SEntSpan = 5
+        ROWNcycx  = 6;  COLNcycx  = 2; 
+        ROWNcycy  = 6;  COLNcycy  = 7; 
+        ROWF_0x   = 8;  COLF_0x   = 2; DDISpan  = 1
+        ROWF_0y   = 8;  COLF_0y   = 7; LabSpan  = 1
+        ROWt1     = 10; COLt1     = 2; EWDT = 8
+        ROWt2     = 10; COLt2     = 7; 
+        ROWL      = 12; COLL      = 3; 
+        ROWAeff   = 14; COLAeff   = 3; 
+        ROWBPF    = 16; COLBPF    = 3;
+        ROWORD    = 18; COLORD    = 3;
+        ROWN      = 20; COLN      = 3;
+        
+        #Slider Frame
+        ROWTDn    = 22; COLTDn    = 2;
+        ROWDelt1  = 24; COLDelt1  = 1;
+        ROWDelt2  = 24; COLDelt2  = 8;
+        ROWSLD    = 24; COLSLD    = 3;
+        #Sim Select Frame
+        ROWSIMSEL = 0; COLSIMSEL = 4; 
+        ROWPLTSEL = 2; COLPLTSEL = 4;
+        ROWCONVRT = 4; COLCONVRT = 0;
+        ROWCLOSE  = 4; COLCLOSE  = 10;
+        ROWRESET  = 4; COLRESET  = 5;
+        #root.update()
+        #print(self.EBFrame.winfo_width())
+        for i in range(0,ROWSLD,2):
+            self.EBFrame.grid_rowconfigure(i, weight=1,uniform='fred')
+        for j in range(0,9):
+            if j not in [0,1,4,6]:
+                print(j)
+                self.EBFrame.grid_columnconfigure(j, weight=1,uniform='fred')
+
+        
+        #%% Preset Frame
+        ##Run Simulation Button
+        self.Convert_Button = tk.Button(self.PSFrame, text='Popout Graph', command=self.RunSim)
+        self.Convert_Button.grid(row = ROWCONVRT,column = COLCONVRT,rowspan=2,columnspan=2,sticky='nwse')
+        
+        #Close Button
+        self.close_button = tk.Button(self.PSFrame, text='Load Preset', command=self.close)
+        self.close_button.grid(row = ROWCLOSE,column = COLCLOSE,sticky='w')
+        
+        #Reset Button
+        self.reset_button = tk.Button(self.PSFrame, text='Save Preset', command=self.reset)
+        self.reset_button.grid(row = ROWRESET,column = COLRESET,sticky='w')
+        
+        #%% Double Entries
+        
+        #Driving and Injection Labels
+        tk.Label(self.EBFrame, text="Driving",relief='flat',justify='center',anchor='n',bg=LabelBG).grid(row=ROWf_0x-1,column=COLf_0x,columnspan=DEntSpan,sticky='we')
+        tk.Label(self.EBFrame, text="Injection",relief='flat',anchor='n',bg=LabelBG).grid(row=ROWf_0y-1,column=COLf_0y,columnspan=DEntSpan,sticky='we')
+        #x and y labels, just to make it absolutely clear:
+        dROW = abs(ROWf_0x - ROWNcycx)
+        for i in range(4):
+            tk.Label(self.EBFrame, text="x",relief='flat',anchor='e',bg=LabelBG).grid(row=dROW*i+ROWf_0x,column=COLf_0x-1,columnspan=DDISpan,sticky='e')
+            tk.Label(self.EBFrame, text="y",relief='flat',anchor='e',bg=LabelBG).grid(row=dROW*i+ROWf_0y,column=COLf_0y-1,columnspan=DDISpan,sticky='e') 
+            tk.Label(self.EBFrame, text="  ",relief='flat',anchor='w',bg=LabelBG).grid(row=dROW*i+ROWf_0x,column=COLL+2,columnspan=1,sticky='w')
+        
+        
+        tk.Label(self.EBFrame, text="Laser Frequencies (f_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWf_0x,column=0,columnspan=LabSpan,sticky='we')
+        
+        self.f_0x   = tk.StringVar(root); self.f_0x.set(str(VAR['f_0x']))
+        self.EBf_0x = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.f_0x)
+        self.EBf_0x.grid(row=ROWf_0x,column=COLf_0x,columnspan=DEntSpan,sticky='we')
+        
+        self.f_0y   = tk.StringVar(root); self.f_0y.set(str(VAR['f_0y']))
+        self.EBf_0y = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.f_0y)
+        self.EBf_0y.grid(row=ROWf_0y,column=COLf_0y,columnspan=DEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Optical Cycles (f_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWNcycx,column=0 ,columnspan=LabSpan,sticky='we') 
+        self.Ncycx   = tk.StringVar(root); self.Ncycx.set(str(VAR['Ncycx']))
+        self.EBNcycx = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Ncycx)
+        self.EBNcycx.grid(row=ROWNcycx,column=COLNcycx,columnspan=DEntSpan,sticky='we')
+        
+        self.Ncycy   = tk.StringVar(root); self.Ncycy.set(str(VAR['Ncycy']))
+        self.EBNcycy = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Ncycy)
+        self.EBNcycy.grid(row=ROWNcycy,column=COLNcycy,columnspan=DEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Optical Field Strength (F_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWF_0x,column=0 ,columnspan=LabSpan,sticky='we') 
+        self.F_0x   = tk.StringVar(root); self.F_0x.set(str(VAR['F_0x']))
+        self.EBF_0x = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.F_0x)
+        self.EBF_0x.grid(row=ROWF_0x,column=COLF_0x,columnspan=DEntSpan,sticky='we')
+        
+        self.F_0y   = tk.StringVar(root); self.F_0y.set(str(VAR['F_0y']))
+        self.EBF_0y = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.F_0y)
+        self.EBF_0y.grid(row=ROWF_0y,column=COLF_0y,columnspan=DEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Time Range (t)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWt1,column=0,columnspan=LabSpan,sticky='we')
+        self.t1   = tk.StringVar(root); self.t1.set(str(VAR['t1']))
+        self.EBt1 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.t1)
+        self.EBt1.grid(row=ROWt1,column=COLt1,columnspan=DEntSpan,sticky='we')
+        
+        self.t2   = tk.StringVar(root); self.t2.set(str(VAR['t2']))
+        self.EBt2 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.t2)
+        self.EBt2.grid(row=ROWt2,column=COLt2,columnspan=DEntSpan,sticky='we')
+        
+        #%% Single Entries
+        tk.Label(self.EBFrame, text="Material Thickness (L)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWL,column=0,columnspan=LabSpan,sticky='we')
+        self.L   = tk.StringVar(root); self.L.set(str(VAR['L']))
+        self.EBL = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.L)
+        self.EBL.grid(row=ROWL,column=COLL,columnspan=SEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Effective Area (Aeff)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWAeff,column=0,columnspan=LabSpan,sticky='we')
+        self.Aeff   = tk.StringVar(root); self.Aeff.set(str(VAR['Aeff']))
+        self.EBAeff = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Aeff)
+        self.EBAeff.grid(row=ROWAeff,column=COLAeff,columnspan=SEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Band Pass Filter",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWBPF,column=0,columnspan=LabSpan,sticky='we')
+        self.BPF = tk.StringVar(root); self.BPF.set(str(VAR['BPF']))
+        self.EBBPF = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.BPF)
+        self.EBBPF.grid(row=ROWBPF,column=COLBPF,columnspan=SEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Orders of <a^2n+1> (ORD)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWORD,column=0,sticky='we')
+        self.ORD = tk.StringVar(root); self.ORD.set(str(VAR['ORD']))
+        self.EBORD = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.ORD)
+        self.EBORD.grid(row=ROWORD,column=COLORD,columnspan=SEntSpan,sticky='we')
+        
+        tk.Label(self.EBFrame, text="Sampling Points (N)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWN,column=0,sticky='w')
+        self.N = tk.StringVar(root); self.N.set(str(VAR['N']))
+        self.EBN = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.N)
+        self.EBN.grid(row=ROWN,column=COLN,columnspan=SEntSpan,sticky='we')
+        
+         #Temporal Delay
+        self.TBTDn = tk.StringVar(root); self.TBTDn.set(str(VAR['TDn']))
+        
+        tk.Label(self.EBFrame, text="Teporal Delay Δt                          ",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWTDn,column=0,columnspan=LabSpan,sticky='we')
+        tk.Label(self.EBFrame, text="=",relief='flat',anchor='c',bg=LabelBG).grid(row=ROWTDn,column =COLL+1,columnspan=3,sticky='we')
+        tk.Label(self.EBFrame,justify='center',width=EWDT,textvariable=self.TBTDn).grid(row=ROWTDn,column=COLDelt2-1,columnspan=2,sticky='we')
+        
+        self.TDn = tk.StringVar(root); self.TDn.set(str(VAR['TDn']))
+        self.EBTDn = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.TDn)
+        self.EBTDn.grid(row=ROWTDn,column=COLTDn,columnspan=2,sticky='we')
+        #Temporal Delay
+        
+        tk.Label(self.EBFrame, text="n_min",relief='flat',anchor='e',bg=LabelBG).grid(row=ROWDelt1,column=COLDelt1-1,sticky='swe')
+        self.Delt1 = tk.StringVar(root); self.Delt1.set(str(VAR['Delt1']))
+        self.EBDelt1 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Delt1)
+        self.EBDelt1.grid(row=ROWDelt1,column=COLDelt1,columnspan=2,sticky='wse')
+        
+        ##Frame Slider 
+        self.DeltSlider = tk.Scale(self.EBFrame,from_=-1, to=1, orient='horizontal',width=10,length=100,sliderlength=10)
+        self.DeltSlider.grid(row=ROWSLD,column=COLSLD, columnspan=5, sticky='swe')
+        
+        ##Delt2
+        self.Delt2 = tk.StringVar(root); self.Delt2.set(str(VAR['Delt2']))
+        self.EBDelt2 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Delt2)
+        self.EBDelt2.grid(row=ROWDelt2,column=COLDelt2,columnspan=2,sticky='swe')
+        
+       
+        #%% Populating the Simulation Selection Frame
         #Defining StringVar for SIMSEL Options Menu
         self.SSV = tk.StringVar(root)
-        self.SSV.set(SIMSEL[VARSTORE['Sim Select']])
-        #Generating the actual OptionsMenu
-        self.DDSIMS= tk.OptionMenu(self.GFrame, self.SSV, *SIMSEL)
-        tk.Label(self.GFrame, text="Select a Simulation",relief='flat',bg=LabelBG).grid(row = 9, column = 0)
-        self.DDSIMS.grid(row = 10, column =0)
+        self.SSV.set(SIMSEL[VAR['Sim Select']])
+        
+        #Generating Simulation Selector options menu
+        self.DDSIMS= tk.OptionMenu(self.RSFrame, self.SSV, *SIMSEL)
+        tk.Label(self.RSFrame, text="Select a Simulation",relief='flat',anchor='w',bg=LabelBG).grid(row = ROWSIMSEL, column = 0,sticky='we')
+        self.DDSIMS.grid(row = ROWSIMSEL, column =COLSIMSEL,columnspan=10,sticky='w')
         self.DDSIMS.config(width = SelBoxLen,bg=ButtonBG,activebackground =ButtonABG)
         self.DDSIMS["menu"].config(bg=ButtonABG)
         def PLT_DDGen(self):
             #Defining StringVar for PLTSEL Options Menu
             self.PSV = tk.StringVar(root)
-            self.PSV.set(PLTSEL[int(self.SSV.get()[0])][VARSTORE['Plot Select']])
-            #Generating the actual OptionsMenu
-            self.DDPLT= tk.OptionMenu(self.GFrame, self.PSV, *PLTSEL[int(self.SSV.get()[0])])
-            tk.Label(self.GFrame, text="Select a Plot",relief ='flat',bg=LabelBG ).grid(row = 9, column = 1)
-            self.DDPLT.grid(row = 10, column =1)
+            self.PSV.set(PLTSEL[int(self.SSV.get()[0])][VAR['Plot Select']])
+            #Generating Plot Selector options menu
+            self.DDPLT= tk.OptionMenu(self.RSFrame, self.PSV, *PLTSEL[int(self.SSV.get()[0])])
+            tk.Label(self.RSFrame, text="Select a Plot",relief ='flat',anchor='w',bg=LabelBG ).grid(row = ROWPLTSEL, column = 0,sticky='we')
+            self.DDPLT.grid(row = ROWPLTSEL, column =COLPLTSEL,columnspan=5,sticky='w')
             self.DDPLT.config(width = SelBoxLen,bg=ButtonBG,activebackground =ButtonABG)
             self.DDPLT["menu"].config(bg=ButtonABG)
             
         PLT_DDGen(self)   
         
         def SIM_DDChange(*args):
-            VARSTORE['Sim Select'] = int(self.SSV.get()[0])
-            VARSTORE['Plot Select'] = 0
+            VAR['Sim Select'] = int(self.SSV.get()[0])
+            VAR['Plot Select'] = 0
             self.DDPLT.destroy() #Destroy old OptionsMenu so it can be re-created (there might be a better way to do this)
             PLT_DDGen(self)      #Re generate PLT OptionsMenu
         def PLT_DDChange(*args):
-            VARSTORE['Plot Select'] = int(self.PSV.get()[0])
+            VAR['Plot Select'] = int(self.PSV.get()[0])
             
         # link function to change dropdown
         self.SSV.trace('w',SIM_DDChange)
         self.PSV.trace('w',PLT_DDChange)
         
+      
         
-#        
+        #VAR = {'Sim Select':0,'Plot Select':0,
+        #   'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_0x':0, 'F_0y':0,
+        #   't1':0, 't2':0, 'L':0, 'Aeff':0, 'BPF':0,  'TDn':0, 'Delt1':0, 'Delt2':0,  'ORD':0,  'N':0}
+         
+        ##Run Simulation Button
+        self.Convert_Button = tk.Button(self.RSFrame, text='Run Simulation', command=self.RunSim)
+        self.Convert_Button.grid(row = ROWCONVRT,column = COLCONVRT,rowspan=2,columnspan=2,sticky='nwse')
+        
         #Close Button
-        self.close_button = tk.Button(self.GFrame, text='Close', command=self.close)
-        self.close_button.grid(row = 11,column = 5,sticky='w')
+        self.close_button = tk.Button(self.RSFrame, text='Close', command=self.close)
+        self.close_button.grid(row = ROWCLOSE,column = COLCLOSE,sticky='w')
+        
+        #Reset Button
+        self.reset_button = tk.Button(self.RSFrame, text='Reset', command=self.reset)
+        self.reset_button.grid(row = ROWRESET,column = COLRESET,sticky='w')
         
     
     def MaintainAspect(self,event):
@@ -138,10 +323,12 @@ class FFAST_MPEGUI:
         root.geometry('{}x{}'.format(XDIM,YDIM))
      
      
-    def convert(self,event):
+    def RunSim(self,event):
         print(root.winfo_height())
 
-
+    def reset(self,event):
+        print('Make this reset in the future')
+    
     def close(self):
         print('Bye!')
         root.destroy()
