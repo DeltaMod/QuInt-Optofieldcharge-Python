@@ -6,6 +6,7 @@ OFunc - A function transfer from Matlab
 import numpy as np
 import sympy as sp
 from scipy.constants import c
+from scipy.constants import epsilon_0 as eps_0
 sp.init_printing(use_latex=False) 
 
 def ErrCode(String):
@@ -221,15 +222,15 @@ class FFTD(object):
         
          ## ----- E_t -> E_w ----- ##
          # Perform fft and add dispersion
-         self.Etf   = np.fft.fft(self.Eti)          # fft with no padding
+         self.Ew    = np.fft.fft(self.Eti)         # fft with no padding
          self.wf    = np.linspace(w_t2,w_t1,N)     # Defining the frequency axis - it's "backwards" because the fft goes high to low freq
          self.phiw  = Dispersion_Factor(self.phi,self.wf,self.w_0)    # Get the dispersion factor 
          self.theta = Phase_Offset(Tht)                              # Get the phase offset
-         self.Etf   = self.Etf*np.exp(-1.j*self.phiw)                   #Apply dispersion
+         self.Ewf   = self.Ew*np.exp(-1.j*self.phiw)                   #Apply dispersion
         
          ## ---- E_w -> E_t ---- ##
          
-         self.Etf   = np.flip((np.fft.ifft(self.Etf)))     #We flip Ew before ifft, because otherwise it is backwards when transformed back
+         self.Etf   = np.flip((np.fft.ifft(self.Ewf)))     #We flip Ew before ifft, because otherwise it is backwards when transformed back
          Dt = 2*np.pi/self.wf[-1]                  #Extract max time
          #dt_w = 2*np.pi/self.wf[1];               #Extract min time
          t1 =   -self.t_0                          # set t1
@@ -305,6 +306,17 @@ class MaterialProperties(object):
         #   ErrCode('ERROR: type(RIEQ) = '+str(type(RIEQ))+' is not of a sympy class'+
          #                    '\nMake sure you\'re providing the symbolic equation for the refractive index')
         
+def Photoinduced_Charge(self,F_0x,F_a,a2disp,Aeff,Order):
+    self.TermNames = ['a'+str(2*n+1) for n in range(Order)]     
+    self.Terms     = [Aeff*eps_0*F_0x*(F_0x/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
+    self.Sum       = sum(self.Terms)
+    
+def Delta_Photoinduced_Charge(self,F_0x,F_0y,F_a,a2disp,Aeff,Order):      
+    self.TermNames = ['a'+str(2*n+1) for n in range(Order)]
+    self.Terms     = [(1/(2*n+1))*Aeff*eps_0*F_0x*(F_0y/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
+    self.Sum       = sum(self.Terms)
 
+    
+    
 
         
