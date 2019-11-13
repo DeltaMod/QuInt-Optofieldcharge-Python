@@ -306,15 +306,17 @@ class MaterialProperties(object):
         #   ErrCode('ERROR: type(RIEQ) = '+str(type(RIEQ))+' is not of a sympy class'+
          #                    '\nMake sure you\'re providing the symbolic equation for the refractive index')
         
-def Photoinduced_Charge(self,F_0x,F_a,a2disp,Aeff,Order):
-    self.TermNames = ['a'+str(2*n+1) for n in range(Order)]     
-    self.Terms     = [Aeff*eps_0*F_0x*(F_0x/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
-    self.Sum       = sum(self.Terms)
-    
-def Delta_Photoinduced_Charge(self,F_0x,F_0y,F_a,a2disp,Aeff,Order):      
-    self.TermNames = ['a'+str(2*n+1) for n in range(Order)]
-    self.Terms     = [(1/(2*n+1))*Aeff*eps_0*F_0x*(F_0y/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
-    self.Sum       = sum(self.Terms)
+class Photoinduced_Charge(object):
+    def __init__(self,F_0x,F_a,a2disp,Aeff,Order):
+        self.TermNames = ['a'+str(2*n+1) for n in range(Order)]     
+        self.Terms     = [Aeff*eps_0*F_0x*(F_0x/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
+        self.Sum       = sum(self.Terms)
+        
+class Delta_Photoinduced_Charge(object):
+    def __init__(self,F_0x,F_0y,F_a,a2disp,Aeff,Order):      
+        self.TermNames = ['a'+str(2*n+1) for n in range(Order)]
+        self.Terms     = [(1/(2*n+1))*Aeff*eps_0*F_0x*(F_0y/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
+        self.Sum       = sum(self.Terms)
 
     
     

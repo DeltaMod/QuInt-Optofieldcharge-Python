@@ -13,7 +13,7 @@ from scipy.constants import c as c                     #m/s
 from scipy.constants import epsilon_0 as eps_0         #m**-3kg**-1s**4A**2    - Permittivity of free space
 UIRUN = 0
 if UIRUN == 0:
-    F_0      = np.linspace(0,2.5,1+int(( 2.5 / 0.05)))*10**10   #Vm**-1              - Optical Field
+    F_0x      = np.linspace(0,2.5,1+int(( 2.5 / 0.05)))*10**10   #Vm**-1              - Optical Field
     ## -- Variable Parameters -- ##
     f_0x     = 375*10**12              #Hz                - Laser frequency (From our lab) 
     f_0y     = 375*10**12*2            #Hz                - Laser frequency (first Harmonic) 
@@ -54,7 +54,7 @@ if UIRUN == 0:
     Dt_w = 2*np.pi/w1; dt_w = 2*np.pi/w2   
     t_w1 = -Dt_w/2; t_w2 = Dt_w/2
     
-    Delt1  = -100*10**(-15); Delt2 = 100*10**(-15)
+    Delt1  = -50; Delt2 = 50 #Note, this used to be given in fs already
     
     Delt = np.linspace(Delt1,Delt2,N)
     
@@ -127,7 +127,7 @@ a2disp = OFunc.Vec_Pot_Mom(w_0x,Estr.tf,Estr.Etf,ORD)
 #fun_Q2 = @(F_0x,F_a,a2disp,Aeff) eps_0*F_0x.*(F_0x/F_a)**2.*(a2disp(1) +(F_0x/F_a)**2*a2disp(2)...
 #                                   +(F_0x/F_a)**4*a2disp(3)+(F_0x/F_a)**6*a2disp(4)+(F_0x/F_a)**8*a2disp(5))*Aeff
 #Q = fun_Q2(F_0,F_a,a2disp,Aeff)
-Q = OFunc.Photoinduced_Charge(F_0,F_a,a2disp,Aeff,ORD)
+Q = OFunc.Photoinduced_Charge(F_0x,F_a,a2disp,Aeff,ORD)
 
 Etf2n = [np.real(Estr.Etf)]+[np.real(Estr.Etf)**(2*n+1) for n in range(ORD)]
 
@@ -167,32 +167,22 @@ Etf2n = [np.real(Estr.Etf)]+[np.real(Estr.Etf)**(2*n+1) for n in range(ORD)]
                
 
 ## Alternate Code
-Estw = OFunc.FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0)
+Estw = OFunc.FFTD(w,Ew,w_0x,SiO2.phi)
+Estw.ftt(theta)
 ## if PlotSelect ==  "E_w IFFT Dispersion"
 #plot(Estw.ftt.tdisp,real(Estw.ftt.Etdisp)); grid on; fprintf(['\n','Plotting [',PlotSelect{1},']']);
 #end
 
 ## -- Dual Pulses with Temporal Delay Delt -- ##
-#To start off, the temporal delay \Delta t (We will call it Delt in the
-#code) is the delay between two short pulses. Namely:
-#The driving pulse (F_0 = Fx0) that we will call: Ed(t) (The oscillation direction is between plates)
-#The Injection Pulse (F0y) that we will call:     Ei(t) (The oscillation direction is perpendicular to the plates)
-#For all intents and purposes, these are called a(t), and were called this
-#in reference in the photoinducedchargecode.
-#The equation for the new vector potential <a^{2n+1}>(Delt) is now given by:
-
+#The temporal delay \Delta t (Delt) is the delay between two short pulses. Namely:
+#The driving pulse (field F_0x) Ed(t)  Ed(t) (Oscillation direction is between plates)
+#And the Injection Pulse (field F_0y)  Ei(t) (Oscillation direction is perpendicular to the plates)
+#Are both treated as a(t), and their new vector potential <a^{2n+1}>(Delt) is now given by:
 #<a^{2n+1}>(Delt) = w_0x integral(@(time) a(t)*(a(t-Delt))^2n,t(1),t(N))
-#Note here, that a(t) represents the Driving pulse (F_0) and a^2n represents the Injection pulse F0y
+#Note here, that a(t) represents the Driving pulse (F_0x) and a^2n represents the Injection pulse (F_0y
 
-
-#We start by defining the two pulses (To start off, let's make them identical)
-##fun_Et(A_t,t,T,w_0x,theta)
-##fun_Ew(A_w,w,W,w_0x,psi) - You need this->Et to do this I think...
-#w_d = w_0x; w_i = w_0y; # w_d, the weaker driving pulse (w_0x or w_0xx), and w_i, the stronger injection pulse (w_0y, or w_i)
+#w_d = w_0x; w_i = w_0y; # w_d, the weaker driving pulse (w_0x), and w_i, the stronger injection pulse (w_0y)
 #W_d = W  ; W_i = W_y; #Respective FWHM for each
-
-
-
 
 ## Dual Polarisation Equation ##
 #fun_QDelt2 = @(F_0x,F_0y,a2n,Aeff) eps_0.*F_0x.*(F_0y/F_a)**2*(1/3 * a2n(1)+...
@@ -201,9 +191,8 @@ Estw = OFunc.FFTD(w,Ew,w_0x,'ftt',SiO2.phi,0)
 #                                                              1/9 QPol2(n) = fun_QDelt(F_0(end)/12.5,F_0(end)/1.25,F_a,a2pol(n,:),Aeff,ORD)  * a2n(4).*(F_0y./F_a)**6+...
 #                                                              1/11* a2n(5).*(F_0y./F_a)**8)*Aeff; 
                                                      
-
-N_Delt = Delt2 - Delt1 + 1
-Deltn  = np.linspace(Delt1,Delt2,N_Delt)
+N_Delt = int(Delt2 - Delt1 + 1)
+Deltn  = np.linspace(Delt1,Delt2,N_Delt).round().astype(int)
 E_td = OFunc.FFTD(t,OFunc.TDGE(A_t,t,t_0,T_x,w_0x,0),w_0x,SiO2.phi)
 E_td.ttt(0)
 E_ti = OFunc.FFTD(t,OFunc.TDGE(A_t,t,t_0,T_y,w_0y,0),w_0y,SiO2.phi)
@@ -211,20 +200,20 @@ E_ti.ttt(0)
 Delt = np.linspace(Delt1*dt,Delt2*dt,N_Delt)
 QHarm = []
 QPol = []
-a2harm =  np.zeros([NDelt,ORD])
-a2pol  =  np.zeros([NDelt,ORD])
+a2harm =  np.zeros([N_Delt,ORD])
+a2pol  =  np.zeros([N_Delt,ORD])
 for n in range(N_Delt):
     Etdshift = np.roll(E_td.Etf,Deltn[n])
     tdshift  = np.roll(E_td.tf,Deltn[n]) 
     Edires = E_td.Etf+E_ti.Etf
 
     for m in range(ORD):
-        a2harm[n,m] = w_0x*trapz(E_td.tf,np.real(Edires)**(2*m+1))
-        a2pol[n,m]  = w_0x*trapz(E_td.tf,np.real(Etdshift)*np.real(E_ti.Etf)**(2*m)) 
+        a2harm[n,m] = w_0x*np.trapz(E_td.tf,np.real(Edires)**(2*m+1))
+        a2pol[n,m]  = w_0x*np.trapz(E_td.tf,np.real(Etdshift)*np.real(E_ti.Etf)**(2*m)) 
 
-
-    QHarm.append(OFunc.Photoinduced_Charge(F_0[-1],F_a,a2harm[n,:],Aeff,ORD))
-    QPol.append(OFunc.Delta_Photoinduced_Charge(F_0x,F_0y,F_a,a2pol[n,:],Aeff,ORD))
+#Consider restructuring this command to include all inside of Q.Sum[n] instead of Q[n].Sum, it will make your life easier.
+    QHarm.append(OFunc.Photoinduced_Charge(F_0x[-1],F_a,a2harm[n,:],Aeff,ORD))
+    QPol.append(OFunc.Delta_Photoinduced_Charge(F_0x[-1],F_a,F_a,a2pol[n,:],Aeff,ORD))
  
 ## In case you want animation of the transformation here :)
 
