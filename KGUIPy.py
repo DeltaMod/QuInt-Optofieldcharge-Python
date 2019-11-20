@@ -9,10 +9,12 @@ Created on Fri Nov  8 13:31:20 2019
 '''
 FFAST-MPEG - A quicker than usual way to make gifs, trim videos, split videos and so on!
 '''
+import DispersionToUI
 import os, sys
 import tkinter as tk
-import matplotlib
-from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.figure import Figure
 import numpy as np
 
@@ -61,13 +63,13 @@ SIMSELLen = len(max(SIMSEL, key=len))
 SelBoxLen = max([PLTSELLen,SIMSELLen])
 
 VAR = {'Sim Select':0,'Plot Select':0,
-            'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_0x':0, 'F_0y':0,
+            'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_x':0, 'F_y':0,
             't1':0, 't2':0, 'L':0, 'Aeff':0, 'BPF':0,  'TDn':0, 'Delt1':0, 'Delt2':0,  'ORD':0,  'N':0}
 
 
 
         
-class FFAST_MPEGUI:
+class KGUI:
     LABEL_TEXT = ['FFAST-MPEG']
     def __init__(self, master):
         self.master = master 
@@ -84,8 +86,13 @@ class FFAST_MPEGUI:
       
         
         #Creating Graph Frame
-        self.GCanvas = tk.Frame(root, bg='white', width=YDIM, height=YDIM, relief = 'raised') # , 
-        self.GCanvas.grid(row = 0, column = 0, rowspan=4,  sticky='nwse')
+        self.GCanv = plt.figure(1)
+        self.GCanv.subplots_adjust(bottom=0, top=1, left=0, right=1)
+        self.GCanv = FigureCanvasTkAgg(self.GCanv,master=root)  # A tk.DrawingArea. #,bg='white',width=YDIM, height=YDIM, relief = 'raised'
+        self.GCanv.draw()
+        self.GCanv.get_tk_widget().grid(column=0,row=0,rowspan=4,sticky='nwes',padx=10,pady=10)
+       # self.GCanvas = tk.Frame(root, bg='white', width=YDIM, height=YDIM, relief = 'raised') # , 
+        #self.GCanvas.grid(row = 0, column = 0, rowspan=4,  sticky='nwse')
        
         #Creating Preset Box Frame
         self.PSFrame = tk.Frame(root,bg='ghostwhite')
@@ -115,8 +122,8 @@ class FFAST_MPEGUI:
         ROWf_0y   = 4;  COLf_0y   = 6; SEntSpan = 5
         ROWNcycx  = 6;  COLNcycx  = 2; 
         ROWNcycy  = 6;  COLNcycy  = 7; 
-        ROWF_0x   = 8;  COLF_0x   = 2; DDISpan  = 1
-        ROWF_0y   = 8;  COLF_0y   = 7; LabSpan  = 1
+        ROWF_x   = 8;  COLF_x   = 2; DDISpan  = 1
+        ROWF_y   = 8;  COLF_y   = 7; LabSpan  = 1
         ROWt1     = 10; COLt1     = 2; EWDT = 8
         ROWt2     = 10; COLt2     = 7; 
         ROWL      = 12; COLL      = 3; 
@@ -171,85 +178,104 @@ class FFAST_MPEGUI:
             tk.Label(self.EBFrame, text="y",relief='flat',anchor='e',bg=LabelBG).grid(row=dROW*i+ROWf_0y,column=COLf_0y-1,columnspan=DDISpan,sticky='e') 
             tk.Label(self.EBFrame, text="  ",relief='flat',anchor='w',bg=LabelBG).grid(row=dROW*i+ROWf_0x,column=COLL+2,columnspan=1,sticky='w')
         
+        self.vcmd = (root.register(self.validate),
+                '%d', '%i', '%P', '%s', '%S', '%v', '%V', '%W')
+        """
+        %d Type of action: 1 for insert, 0 for delete, or -1 for focus, forced or textvariable validation.
+        
+        %i Index of char string to be inserted/deleted, if any, otherwise -1.
+        
+        %P The value of the entry if the edit is allowed. If you are configuring the entry widget to have a new textvariable, this will be the value of that textvariable.
+        
+        %s The current value of entry prior to editing.
+        
+        %S The text string being inserted/deleted, if any, {} otherwise.
+        
+        %v The type of validation currently set.
+        
+        %V The type of validation that triggered the callback (key, focusin, focusout, forced).
+        
+        %W The name of the entry widget.
+        """
         
         tk.Label(self.EBFrame, text="Laser Frequencies (f_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWf_0x,column=0,columnspan=LabSpan,sticky='we')
         
-        self.f_0x   = tk.StringVar(root); self.f_0x.set(str(VAR['f_0x']))
-        self.EBf_0x = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.f_0x)
+        self.VAR_f_0x   = tk.StringVar(root); self.VAR_f_0x.set(str(VAR['f_0x']))
+        self.EBf_0x = tk.Entry(self.EBFrame,validate='key',validatecommand=self.vcmd,justify='center',width=EWDT,textvariable=self.VAR_f_0x)
         self.EBf_0x.grid(row=ROWf_0x,column=COLf_0x,columnspan=DEntSpan,sticky='we')
         
-        self.f_0y   = tk.StringVar(root); self.f_0y.set(str(VAR['f_0y']))
-        self.EBf_0y = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.f_0y)
+        self.VAR_f_0y   = tk.StringVar(root); self.VAR_f_0y.set(str(VAR['f_0y']))
+        self.EBf_0y = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_f_0y)
         self.EBf_0y.grid(row=ROWf_0y,column=COLf_0y,columnspan=DEntSpan,sticky='we')
         
         tk.Label(self.EBFrame, text="Optical Cycles (f_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWNcycx,column=0 ,columnspan=LabSpan,sticky='we') 
-        self.Ncycx   = tk.StringVar(root); self.Ncycx.set(str(VAR['Ncycx']))
-        self.EBNcycx = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Ncycx)
+        self.VAR_Ncycx   = tk.StringVar(root); self.VAR_Ncycx.set(str(VAR['Ncycx']))
+        self.EBNcycx = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_Ncycx)
         self.EBNcycx.grid(row=ROWNcycx,column=COLNcycx,columnspan=DEntSpan,sticky='we')
         
-        self.Ncycy   = tk.StringVar(root); self.Ncycy.set(str(VAR['Ncycy']))
-        self.EBNcycy = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Ncycy)
+        self.VAR_Ncycy   = tk.StringVar(root); self.VAR_Ncycy.set(str(VAR['Ncycy']))
+        self.EBNcycy = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_Ncycy)
         self.EBNcycy.grid(row=ROWNcycy,column=COLNcycy,columnspan=DEntSpan,sticky='we')
         
-        tk.Label(self.EBFrame, text="Optical Field Strength (F_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWF_0x,column=0 ,columnspan=LabSpan,sticky='we') 
-        self.F_0x   = tk.StringVar(root); self.F_0x.set(str(VAR['F_0x']))
-        self.EBF_0x = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.F_0x)
-        self.EBF_0x.grid(row=ROWF_0x,column=COLF_0x,columnspan=DEntSpan,sticky='we')
+        tk.Label(self.EBFrame, text="Optical Field Strength (F_)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWF_x,column=0 ,columnspan=LabSpan,sticky='we') 
+        self.VAR_F_x   = tk.StringVar(root); self.VAR_F_x.set(str(VAR['F_x']))
+        self.EBF_x = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_F_x)
+        self.EBF_x.grid(row=ROWF_x,column=COLF_x,columnspan=DEntSpan,sticky='we')
         
-        self.F_0y   = tk.StringVar(root); self.F_0y.set(str(VAR['F_0y']))
-        self.EBF_0y = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.F_0y)
-        self.EBF_0y.grid(row=ROWF_0y,column=COLF_0y,columnspan=DEntSpan,sticky='we')
+        self.VAR_F_y   = tk.StringVar(root); self.VAR_F_y.set(str(VAR['F_y']))
+        self.EBF_y = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_F_y)
+        self.EBF_y.grid(row=ROWF_y,column=COLF_y,columnspan=DEntSpan,sticky='we')
         
         tk.Label(self.EBFrame, text="Time Range (t)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWt1,column=0,columnspan=LabSpan,sticky='we')
-        self.t1   = tk.StringVar(root); self.t1.set(str(VAR['t1']))
-        self.EBt1 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.t1)
+        self.VAR_t1   = tk.StringVar(root); self.VAR_t1.set(str(VAR['t1']))
+        self.EBt1 = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_t1)
         self.EBt1.grid(row=ROWt1,column=COLt1,columnspan=DEntSpan,sticky='we')
         
-        self.t2   = tk.StringVar(root); self.t2.set(str(VAR['t2']))
-        self.EBt2 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.t2)
+        self.VAR_t2   = tk.StringVar(root); self.VAR_t2.set(str(VAR['t2']))
+        self.EBt2 = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_t2)
         self.EBt2.grid(row=ROWt2,column=COLt2,columnspan=DEntSpan,sticky='we')
         
         #%% Single Entries
         tk.Label(self.EBFrame, text="Material Thickness (L)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWL,column=0,columnspan=LabSpan,sticky='we')
-        self.L   = tk.StringVar(root); self.L.set(str(VAR['L']))
-        self.EBL = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.L)
+        self.VAR_L   = tk.StringVar(root); self.VAR_L.set(str(VAR['L']))
+        self.EBL = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_L)
         self.EBL.grid(row=ROWL,column=COLL,columnspan=SEntSpan,sticky='we')
         
         tk.Label(self.EBFrame, text="Effective Area (Aeff)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWAeff,column=0,columnspan=LabSpan,sticky='we')
-        self.Aeff   = tk.StringVar(root); self.Aeff.set(str(VAR['Aeff']))
-        self.EBAeff = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Aeff)
+        self.VAR_Aeff   = tk.StringVar(root); self.VAR_Aeff.set(str(VAR['Aeff']))
+        self.EBAeff = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_Aeff)
         self.EBAeff.grid(row=ROWAeff,column=COLAeff,columnspan=SEntSpan,sticky='we')
         
         tk.Label(self.EBFrame, text="Band Pass Filter",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWBPF,column=0,columnspan=LabSpan,sticky='we')
-        self.BPF = tk.StringVar(root); self.BPF.set(str(VAR['BPF']))
-        self.EBBPF = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.BPF)
+        self.VAR_BPF = tk.StringVar(root); self.VAR_BPF.set(str(VAR['BPF']))
+        self.EBBPF = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_BPF)
         self.EBBPF.grid(row=ROWBPF,column=COLBPF,columnspan=SEntSpan,sticky='we')
         
         tk.Label(self.EBFrame, text="Orders of <a^2n+1> (ORD)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWORD,column=0,sticky='we')
-        self.ORD = tk.StringVar(root); self.ORD.set(str(VAR['ORD']))
-        self.EBORD = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.ORD)
+        self.VAR_ORD = tk.StringVar(root); self.VAR_ORD.set(str(VAR['ORD']))
+        self.EBORD = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_ORD)
         self.EBORD.grid(row=ROWORD,column=COLORD,columnspan=SEntSpan,sticky='we')
         
         tk.Label(self.EBFrame, text="Sampling Points (N)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWN,column=0,sticky='w')
-        self.N = tk.StringVar(root); self.N.set(str(VAR['N']))
-        self.EBN = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.N)
+        self.VAR_N = tk.StringVar(root); self.VAR_N.set(str(VAR['N']))
+        self.EBN = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_N)
         self.EBN.grid(row=ROWN,column=COLN,columnspan=SEntSpan,sticky='we')
         
          #Temporal Delay
-        self.TBTDn = tk.StringVar(root); self.TBTDn.set(str(VAR['TDn']))
+        self.VAR_TBTDn = tk.StringVar(root); self.VAR_TBTDn.set(str(VAR['TDn']))
         
         tk.Label(self.EBFrame, text="Teporal Delay Δt                          ",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWTDn,column=0,columnspan=LabSpan,sticky='we')
         tk.Label(self.EBFrame, text="=",relief='flat',anchor='c',bg=LabelBG).grid(row=ROWTDn,column =COLL+1,columnspan=3,sticky='we')
-        tk.Label(self.EBFrame,justify='center',width=EWDT,textvariable=self.TBTDn).grid(row=ROWTDn,column=COLDelt2-1,columnspan=2,sticky='we')
+        tk.Label(self.EBFrame,justify='center',width=EWDT,textvariable=self.VAR_TBTDn).grid(row=ROWTDn,column=COLDelt2-1,columnspan=2,sticky='we')
         
-        self.TDn = tk.StringVar(root); self.TDn.set(str(VAR['TDn']))
-        self.EBTDn = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.TDn)
+        self.VAR_TDn = tk.StringVar(root); self.VAR_TDn.set(str(VAR['TDn']))
+        self.EBTDn = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_TDn)
         self.EBTDn.grid(row=ROWTDn,column=COLTDn,columnspan=2,sticky='we')
         #Temporal Delay
         
         tk.Label(self.EBFrame, text="n_min",relief='flat',anchor='e',bg=LabelBG).grid(row=ROWDelt1,column=COLDelt1-1,sticky='swe')
-        self.Delt1 = tk.StringVar(root); self.Delt1.set(str(VAR['Delt1']))
-        self.EBDelt1 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Delt1)
+        self.VAR_Delt1 = tk.StringVar(root); self.VAR_Delt1.set(str(VAR['Delt1']))
+        self.EBDelt1 = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_Delt1)
         self.EBDelt1.grid(row=ROWDelt1,column=COLDelt1,columnspan=2,sticky='wse')
         
         ##Frame Slider 
@@ -257,11 +283,16 @@ class FFAST_MPEGUI:
         self.DeltSlider.grid(row=ROWSLD,column=COLSLD, columnspan=5, sticky='swe')
         
         ##Delt2
-        self.Delt2 = tk.StringVar(root); self.Delt2.set(str(VAR['Delt2']))
-        self.EBDelt2 = tk.Entry(self.EBFrame,justify='center',width=EWDT,textvariable=self.Delt2)
+        self.VAR_Delt2 = tk.StringVar(root); self.VAR_Delt2.set(str(VAR['Delt2']))
+        self.EBDelt2 = tk.Entry(self.EBFrame,justify='center',validate='key',validatecommand=self.vcmd,width=EWDT,textvariable=self.VAR_Delt2)
         self.EBDelt2.grid(row=ROWDelt2,column=COLDelt2,columnspan=2,sticky='swe')
         
-       
+        self.EntryList = ['f_0x','f_0y', 'Ncycx', 'Ncycy', 'F_x', 'F_y',
+            't1', 't2', 'L', 'Aeff', 'BPF',  'TDn', 'Delt1', 'Delt2',  'ORD',  'N']
+        
+        for entry in self.EntryList:
+            self.__getattribute__('EB'+entry).bind('<FocusOut>',self.Entry_Focus_Out)
+            
         #%% Populating the Simulation Selection Frame
         #Defining StringVar for SIMSEL Options Menu
         self.SSV = tk.StringVar(root)
@@ -301,7 +332,7 @@ class FFAST_MPEGUI:
       
         
         #VAR = {'Sim Select':0,'Plot Select':0,
-        #   'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_0x':0, 'F_0y':0,
+        #   'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_x':0, 'F_y':0,
         #   't1':0, 't2':0, 'L':0, 'Aeff':0, 'BPF':0,  'TDn':0, 'Delt1':0, 'Delt2':0,  'ORD':0,  'N':0}
          
         ##Run Simulation Button
@@ -315,19 +346,42 @@ class FFAST_MPEGUI:
         #Reset Button
         self.reset_button = tk.Button(self.RSFrame, text='Reset', command=self.reset)
         self.reset_button.grid(row = ROWRESET,column = COLRESET,sticky='w')
-        
+    def Entry_Focus_Out(self,event):
+        for entry in self.EntryList:
+            if self.__getattribute__('VAR_'+entry).get()=='':
+                self.__getattribute__('VAR_'+entry).set('0')
+           
+    def validate(self, action, index, value_if_allowed,
+                       prior_value, text, validation_type, trigger_type, widget_name):
+        if value_if_allowed:
+            try:
+               float(value_if_allowed)
+               return True
+            except ValueError:
+               return False
+        elif value_if_allowed == '':
+            return True
+        else:
+           return False
+            
+                
     
+
+
     def MaintainAspect(self,event):
         XDIM = int(root.winfo_width() - root.winfo_width() % 16)
         YDIM = int(XDIM*9/16)
         root.geometry('{}x{}'.format(XDIM,YDIM))
      
      
-    def RunSim(self,event):
-        print(root.winfo_height())
-
+    def RunSim(self):
+        sos.system('run DispersionToUI')
+        
     def reset(self,event):
         print('Make this reset in the future')
+    
+    def GetEntries(self):
+        return(self.EntryList)
     
     def close(self):
         print('Bye!')
@@ -335,5 +389,5 @@ class FFAST_MPEGUI:
 
 root = tk.Tk()
 
-FFASTGUI = FFAST_MPEGUI(root)
+KurgGUI= KGUI(root)
 root.mainloop()
