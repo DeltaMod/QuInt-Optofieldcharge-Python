@@ -9,6 +9,10 @@ Created on Fri Nov  8 13:31:20 2019
 '''
 FFAST-MPEG - A quicker than usual way to make gifs, trim videos, split videos and so on!
 '''
+import json
+import OFunc
+import numpy as np
+from OFunc import FFTD as FFTD
 import DispersionToUI
 import os, sys
 import tkinter as tk
@@ -17,6 +21,9 @@ from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.figure import Figure
 import numpy as np
+
+from scipy.constants import c as c                     #m/s
+from scipy.constants import epsilon_0 as eps_0         #m**-3kg**-1s**4A**2    - Permittivity of free space
 
 #Define Colours to use for certain components
 rootBG   = 'aliceblue'
@@ -375,7 +382,7 @@ class KGUI:
      
      
     def RunSim(self):
-        sos.system('run DispersionToUI')
+        None
         
     def reset(self,event):
         print('Make this reset in the future')
