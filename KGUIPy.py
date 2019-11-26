@@ -13,7 +13,7 @@ import json
 import OFunc
 import numpy as np
 from OFunc import FFTD as FFTD
-import DispersionToUI
+import KGD2UI
 import os, sys
 import tkinter as tk
 import matplotlib.pyplot as plt
@@ -24,8 +24,22 @@ import numpy as np
 
 from scipy.constants import c as c                     #m/s
 from scipy.constants import epsilon_0 as eps_0         #m**-3kg**-1s**4A**2    - Permittivity of free space
-
+#import matplotlib
+#matplotlib.use('TKagg') 
 #Define Colours to use for certain components
+plt.rcParams['figure.dpi']         = 150
+plt.rcParams['axes.grid']          = True
+plt.rcParams['axes.axisbelow']     = True
+plt.rcParams['axes.spines.left']   = True
+plt.rcParams['axes.spines.right']  = True
+plt.rcParams['axes.spines.bottom'] = True
+plt.rcParams['axes.spines.top']    = True
+plt.rcParams['axes.spines.top']    = True
+plt.rcParams['ytick.left']         = True
+plt.rcParams['ytick.labelleft']    = True
+plt.rcParams['xtick.bottom']       = True
+plt.rcParams['xtick.labelbottom']  = True
+
 rootBG   = 'aliceblue'
 PlotBG   = 'ghostwhite'
 ButtonBG = 'WhiteSmoke'
@@ -91,15 +105,18 @@ class KGUI:
         tk.Grid.rowconfigure(root, 1, weight=1)
         tk.Grid.rowconfigure(root, 2, weight=1)
       
-        
+        self.VAR = VAR    
         #Creating Graph Frame
-        self.GCanv = plt.figure(1)
-        self.GCanv.subplots_adjust(bottom=0, top=1, left=0, right=1)
-        self.GCanv = FigureCanvasTkAgg(self.GCanv,master=root)  # A tk.DrawingArea. #,bg='white',width=YDIM, height=YDIM, relief = 'raised'
+        self.GraphPlot = plt.figure(1)
+        self.GraphPlot.subplots_adjust(bottom=0, top=1, left=0, right=1)
+        self.GCanv = FigureCanvasTkAgg(self.GraphPlot,master=root)  # A tk.DrawingArea. #,bg='white',width=YDIM, height=YDIM, relief = 'raised'
         self.GCanv.draw()
         self.GCanv.get_tk_widget().grid(column=0,row=0,rowspan=4,sticky='nwes',padx=10,pady=10)
-       # self.GCanvas = tk.Frame(root, bg='white', width=YDIM, height=YDIM, relief = 'raised') # , 
-        #self.GCanvas.grid(row = 0, column = 0, rowspan=4,  sticky='nwse')
+        
+        self.TBFrame = tk.Frame(root,bg='ghostwhite',)
+        self.TBFrame.grid(row=0,column=0,sticky='nw',padx=10,pady=10)
+        self.GToolbar = NavigationToolbar2Tk(self.GCanv, self.TBFrame)
+        self.GToolbar.update()
        
         #Creating Preset Box Frame
         self.PSFrame = tk.Frame(root,bg='ghostwhite')
@@ -170,8 +187,8 @@ class KGUI:
         self.close_button.grid(row = ROWCLOSE,column = COLCLOSE,sticky='w')
         
         #Reset Button
-        self.reset_button = tk.Button(self.PSFrame, text='Save Preset', command=self.reset)
-        self.reset_button.grid(row = ROWRESET,column = COLRESET,sticky='w')
+        self.save_preset_button = tk.Button(self.PSFrame, text='Save Preset', command=self.Save_Preset)
+        self.save_preset_button.grid(row = ROWRESET,column = COLRESET,sticky='w')
         
         #%% Double Entries
         
@@ -204,7 +221,7 @@ class KGUI:
         
         %W The name of the entry widget.
         """
-        
+        self.SimulationCompleted = False
         tk.Label(self.EBFrame, text="Laser Frequencies (f_0)",relief='flat',anchor='w',bg=LabelBG).grid(row=ROWf_0x,column=0,columnspan=LabSpan,sticky='we')
         
         self.VAR_f_0x   = tk.StringVar(root); self.VAR_f_0x.set(str(VAR['f_0x']))
@@ -326,11 +343,19 @@ class KGUI:
         
         def SIM_DDChange(*args):
             VAR['Sim Select'] = int(self.SSV.get()[0])
+            if int(self.SSV.get()[0]) == 0:
+                self.VAR_L.set(0)
+                self.EBL.config(state='disabled')
+            elif int(self.SSV.get()[0]) != 0:
+                self.VAR_L.set(VAR['L'])
+                self.EBL.config(state='normal')
             VAR['Plot Select'] = 0
             self.DDPLT.destroy() #Destroy old OptionsMenu so it can be re-created (there might be a better way to do this)
             PLT_DDGen(self)      #Re generate PLT OptionsMenu
         def PLT_DDChange(*args):
             VAR['Plot Select'] = int(self.PSV.get()[0])
+            if self.SimulationCompleted == True:
+                self.Result_Plotter()
             
         # link function to change dropdown
         self.SSV.trace('w',SIM_DDChange)
@@ -382,16 +407,78 @@ class KGUI:
      
      
     def RunSim(self):
-        None
+        KGD2UI.Calculate_Dispersion(self,VAR)
+        self.Result_Plotter()
+        self.SimulationCompleted = True
+        
+    def Result_Plotter(self):
+        if self.SSV.get() == SIMSEL[0]: #'Simple Photoinduced Charge'
+            if self.PSV.get()   == PLTSEL[0][0]: #'Gaussian Laser Pulse'
+                self.Graph_Plotter(self.Res_t,self.Res_Et,'Time','Normalised Field Amplitude',None)
+            elif self.PSV.get() == PLTSEL[0][1]: #'<a^2n+1>'
+                None
+            elif self.PSV.get() == PLTSEL[0][2]: #'Photoinduced Charge'
+                None
+            elif self.PSV.get() == PLTSEL[0][3]: #'<a^2n+1> Term Contributions to Charge'
+                None
+        
+        elif self.SSV.get() == SIMSEL[1]:# 'Dispersion and Photoinduced Charge'
+            None
+        elif self.SSV.get() == SIMSEL[2]:# 'Dispersion Grapher' 
+            None
+    def Graph_Plotter(self,x,y,xAxName,yAxName,AXLIM):
+        self.GraphPlot = plt.clf()
+        self.GraphPlot = plt.plot(x,np.real(y))
+        plt.xlabel(xAxName)
+        plt.ylabel(yAxName)
+        if AXLIM == 'tight':
+            plt.tight_layout()
+        elif AXLIM == None:
+            None
+        self.GCanv.draw()
+                
+        """
+        SIMSEL = ['Simple Photoinduced Charge',
+                    'Dispersion and Photoinduced Charge',
+                    'Dispersion Grapher'];
+
+        PLTSEL =      [['Gaussian Laser Pulse',        
+               '<a^2n+1>',                     
+               'Photoinduced Charge' ,         
+               '<a^2n+1> Term Contributions to Charge']];
+        PLTSEL.append(['Non Fourier Et(t)'           ,
+               'E_t FFT Plot'                 ,
+               'E_t Final Applied Dispersion' ,
+               'E_t(t)^2n+1 After Dispersion' ,
+               'Post Dispersion Photoinduced Charge',
+               'E_w IFFT Dispersion'          ,
+               'Current Pulse Overlap at given Delta t',
+               'Temporal Overlap Induced Charge',
+               'Dual Polarised Induced Charge'])
+        PLTSEL.append(['No Phi'                       ,
+               'Phi0'                       ,  
+               'Phi1'                        , 
+               'Phi2'                        , 
+               'Phi3'                        ,
+               'All_Phi'])Wat
+        """
+    def Save_Preset(self):
+        print('why is this activating?')
+        Preset = tk.filedialog.asksaveasfile(mode='w', defaultextension=".dat")
+        if Preset is None: # asksaveasfile return `None` if dialog closed with "cancel".
+            return
+        json.dump(self.VAR, open(Preset,'w'))
         
     def reset(self,event):
         print('Make this reset in the future')
+        self.SimulationCompleted = False
     
     def GetEntries(self):
         return(self.EntryList)
     
     def close(self):
         print('Bye!')
+        json.dump(self.VAR, open("SessionRestore.dat",'w'))
         root.destroy()
 
 root = tk.Tk()

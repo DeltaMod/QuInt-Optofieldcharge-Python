@@ -4,8 +4,6 @@ Created on Thu Nov  7 11:44:03 2019
 
 @author: Vidar Flodgren
 """
-import json
-
 
 import OFunc
 import numpy as np
