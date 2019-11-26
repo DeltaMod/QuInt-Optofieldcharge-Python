@@ -69,7 +69,7 @@ def Calculate_Dispersion(self,D):
     f.close()
     self.Res_Et = OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_x'],D['w_0x'],D['theta']) 
     self.Res_Ew = OFunc.FDGE(D['A_w'],D['w'],D['W_x'],D['w_0x'],D['phiw'])
-    
+
     #Note: These are related to each other by: \delta w*\delta t =4ln(2), that is W*T = 4*log(2) which means we get: W  = 4*log(2)/T
     #T = (D['Ncycx']*2*pi())/D['w_0x'] => W = 4*log(2)*D['w_0x']/(D['Ncycx']*2*pi()) 
     
@@ -115,80 +115,90 @@ def Calculate_Dispersion(self,D):
     self.Res_Q = OFunc.Photoinduced_Charge(D['F_0x'],D['F_a'],self.Res_a2disp,D['Aeff'],D['ORD'])
     self.Res_Etf2n = [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])]
     
-    ## if PlotSelect == "E_t(t)^2n+1 After Dispersion"
-    #plot(Estr.ttt.tdisp,Etf2n(:,:),'D['L']ineWidth',1.3)
-    #end
-    
-    
-    ## if PlotSelect == "Post Dispersion Photoinduced Charge"
-    #plot(F_0,abs(Q))
-    #figure(66)
-    #hold on
-    #plot(F_0,abs(Q))
-    #grid on
-    #xlabel('Optical Field [Vm^-^1]')
-    #ylabel('Photinduced Charge [C]')
-    # set(gca, 'YScale', 'log')
-    # plot([0,2.5*10^10],    [1.6*10^-19 1.6*10^-19]'r--')
-    # legend('D['Ncycx'] = 1.0', 'D['Ncycx'] = 1.1', 'D['Ncycx'] = 1.2', 'D['Ncycx'] = 1.3', 'D['Ncycx'] = 1.4', 'D['Ncycx'] = 1.5', 'D['Ncycx'] = 1.6', 'D['Ncycx'] = 1.7', 'D['Ncycx'] = 1.8', 'D['Ncycx'] = 1.9', 'D['Ncycx'] = 2.0', 'e')
-    #end
-    
-    
-    
-    
-    
-    ## -- E_w -> IFFT = E_t, just to show that the dispersion applied is equivalent 
-    Estw = OFunc.FFTD(D['w'],self.Res_Ew,D['w_0x'],D[D['Mat']].phi)
-    Estw.ftt(D['theta'])
-    ## if PlotSelect ==  "E_w IFFT Dispersion"
-    #plot(Estw.ftt.tdisp,real(Estw.ftt.Etdisp)); grid on; fprintf(['\n','Plotting [',PlotSelect{1},']']);
-    #end
-    
-    ## -- Dual Pulses with Temporal Delay Delt -- ##
-    #The driving pulse (field D['F_0x']) Ed(t)  Ed(t) (Oscillation direction is between plates)
-    #And the Injection Pulse (field F_y)  Ei(t) (Oscillation direction is perpendicular to the plates)
-    #Here: a(t) represents the Driving pulse (D['F_0x']) and a^2n represents the Injection pulse (F_y
-    
-    #w_d = D['w_0x']; w_i = D['w_0y']; # w_d, the weaker driving pulse (D['w_0x']), and w_i, the stronger injection pulse (D['w_0y'])
-    #W_d = W  ; W_i = D['W_y']; #Respective FWHM for each
-    
-    ## Dual Polarisation Equation ##
-    #fun_QD['Delt2'] = @(D['F_0x'],F_y,a2n,D['Aeff']) eps_0.*D['F_0x'].*(F_y/D['F_a'])**2*(1/3 * a2n(1)+...
-    #                                                              1/5 * a2n(2).*(F_y./D['F_a'])**2+...
-    #                                                              1/7 * a2n(3).*(F_y./D['F_a'])**4+...
-    #                                                              1/9 QPol2(n) = fun_QDelt(F_0(end)/12.5,F_0(end)/1.25,D['F_a'],a2pol(n,:),D['Aeff'],D['ORD'])  * a2n(4).*(F_y./D['F_a'])**6+...
-    #                                                              1/11* a2n(5).*(F_y./D['F_a'])**8)*D['Aeff']; 
-                                                         
-    D['N_Delt'] = int(D['Delt2'] - D['Delt1'] + 1)
-    self.Res_Deltn  = np.linspace(D['Delt1'],D['Delt2'],D['N_Delt']).round().astype(int)
-    self.Res_E_td = OFunc.FFTD(self.Res_t,OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_x'],D['w_0x'],0),D['w_0x'],D[D['Mat']].phi)
-    self.Res_E_td.ttt(0)
-    self.Res_E_ti = OFunc.FFTD(self.Res_t,OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_y'],D['w_0y'],0),D['w_0y'],D[D['Mat']].phi)
-    self.Res_E_ti.ttt(0)
-    D['Delt'] = np.linspace(D['Delt1']*dt,D['Delt2']*dt,D['N_Delt'])
-    self.Res_QHarm = []
-    self.Res_QPol = []
-    self.Res_a2harm =  np.zeros([D['N_Delt'],D['ORD']])
-    self.Res_a2pol  =  np.zeros([D['N_Delt'],D['ORD']])
-    for n in range(D['N_Delt']):
-        self.Res_Etdshift = np.roll(self.Res_E_td.Etf,self.Res_Deltn[n])
-        self.Res_tdshift  = np.roll(self.Res_E_td.tf,self.Res_Deltn[n]) 
-        self.Res_Edires = self.Res_E_td.Etf+self.Res_E_ti.Etf
-    
-        for m in range(D['ORD']):
-            self.Res_a2harm[n,m] = D['w_0x']*np.trapz(self.Res_E_td.tf,np.real(self.Res_Edires)**(2*m+1))
-            self.Res_a2pol[n,m]  = D['w_0x']*np.trapz(self.Res_E_td.tf,np.real(self.Res_Etdshift)*np.real(self.Res_E_ti.Etf)**(2*m)) 
-    
-    #Consider restructuring this command to include all inside of Q.Sum[n] instead of Q[n].Sum, it will make your life easier.
-        self.Res_QHarm.append(OFunc.Photoinduced_Charge(D['F_0x'][-1],D['F_a'],self.Res_a2harm[n,:],D['Aeff'],D['ORD']))
-        self.Res_QPol.append(OFunc.Delta_Photoinduced_Charge(D['F_0x'][-1],D['F_a'],D['F_a'],self.Res_a2pol[n,:],D['Aeff'],D['ORD']))
-    return() 
-    ## if PlotSelect == "Temporal Overlap Induced Charge"
-    #plot(Delt,real(QHarm(:,:))); fprintf(['\n','Plotting [',PlotSelect{1},']']);
-    #legend(['T_E_i =' num2str((0.5*n-10)*T+T,'#.4g') ')'])
-    #end
-    
-    ## if PlotSelect == "Dual Polarised Induced Charge"
-    #plot(Delt,real(QPol(:,:)));fprintf(['\n','Plotting [',PlotSelect{1},']']);
-    #legend(['T_E_i =' num2str((0.5*n-10)*T+T,'#.4g') ')'])
-    #end
+    if self.SSV.get() == self.SIMSEL[0]:
+        self.Ncycxarray = np.linspace(0,D['Ncycx'],D['N'])
+        T_xarray = (self.Ncycxarray*2*np.pi)/D['w_0x']
+        self.F_0xarray = np.linspace(0,D['F_x'],D['N'])
+        self.Res_Et = OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],T_xarray,D['w_0x'],D['theta']) 
+        self.Res_a2disp = OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et,D['ORD']) 
+        self.Res_Q = OFunc.Photoinduced_Charge(D['F_0x'],D['F_a'],self.Res_a2disp,D['Aeff'],D['ORD'])
+        self.Res_Etf2n = [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])]    
+    if self.SSV.get() == self.SIMSEL[1]:
+        
+        ## if PlotSelect == "E_t(t)^2n+1 After Dispersion"
+        #plot(Estr.ttt.tdisp,Etf2n(:,:),'D['L']ineWidth',1.3)
+        #end
+        
+        
+        ## if PlotSelect == "Post Dispersion Photoinduced Charge"
+        #plot(F_0,abs(Q))
+        #figure(66)
+        #hold on
+        #plot(F_0,abs(Q))
+        #grid on
+        #xlabel('Optical Field [Vm^-^1]')
+        #ylabel('Photinduced Charge [C]')
+        # set(gca, 'YScale', 'log')
+        # plot([0,2.5*10^10],    [1.6*10^-19 1.6*10^-19]'r--')
+        # legend('D['Ncycx'] = 1.0', 'D['Ncycx'] = 1.1', 'D['Ncycx'] = 1.2', 'D['Ncycx'] = 1.3', 'D['Ncycx'] = 1.4', 'D['Ncycx'] = 1.5', 'D['Ncycx'] = 1.6', 'D['Ncycx'] = 1.7', 'D['Ncycx'] = 1.8', 'D['Ncycx'] = 1.9', 'D['Ncycx'] = 2.0', 'e')
+        #end
+        
+        
+        
+        
+        
+        ## -- E_w -> IFFT = E_t, just to show that the dispersion applied is equivalent 
+        Estw = OFunc.FFTD(D['w'],self.Res_Ew,D['w_0x'],D[D['Mat']].phi)
+        Estw.ftt(D['theta'])
+        ## if PlotSelect ==  "E_w IFFT Dispersion"
+        #plot(Estw.ftt.tdisp,real(Estw.ftt.Etdisp)); grid on; fprintf(['\n','Plotting [',PlotSelect{1},']']);
+        #end
+        
+        ## -- Dual Pulses with Temporal Delay Delt -- ##
+        #The driving pulse (field D['F_0x']) Ed(t)  Ed(t) (Oscillation direction is between plates)
+        #And the Injection Pulse (field F_y)  Ei(t) (Oscillation direction is perpendicular to the plates)
+        #Here: a(t) represents the Driving pulse (D['F_0x']) and a^2n represents the Injection pulse (F_y
+        
+        #w_d = D['w_0x']; w_i = D['w_0y']; # w_d, the weaker driving pulse (D['w_0x']), and w_i, the stronger injection pulse (D['w_0y'])
+        #W_d = W  ; W_i = D['W_y']; #Respective FWHM for each
+        
+        ## Dual Polarisation Equation ##
+        #fun_QD['Delt2'] = @(D['F_0x'],F_y,a2n,D['Aeff']) eps_0.*D['F_0x'].*(F_y/D['F_a'])**2*(1/3 * a2n(1)+...
+        #                                                              1/5 * a2n(2).*(F_y./D['F_a'])**2+...
+        #                                                              1/7 * a2n(3).*(F_y./D['F_a'])**4+...
+        #                                                              1/9 QPol2(n) = fun_QDelt(F_0(end)/12.5,F_0(end)/1.25,D['F_a'],a2pol(n,:),D['Aeff'],D['ORD'])  * a2n(4).*(F_y./D['F_a'])**6+...
+        #                                                              1/11* a2n(5).*(F_y./D['F_a'])**8)*D['Aeff']; 
+                                                             
+        D['N_Delt'] = int(D['Delt2'] - D['Delt1'] + 1)
+        self.Res_Deltn  = np.linspace(D['Delt1'],D['Delt2'],D['N_Delt']).round().astype(int)
+        self.Res_E_td = OFunc.FFTD(self.Res_t,OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_x'],D['w_0x'],0),D['w_0x'],D[D['Mat']].phi)
+        self.Res_E_td.ttt(0)
+        self.Res_E_ti = OFunc.FFTD(self.Res_t,OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_y'],D['w_0y'],0),D['w_0y'],D[D['Mat']].phi)
+        self.Res_E_ti.ttt(0)
+        D['Delt'] = np.linspace(D['Delt1']*dt,D['Delt2']*dt,D['N_Delt'])
+        self.Res_QHarm = []
+        self.Res_QPol = []
+        self.Res_a2harm =  np.zeros([D['N_Delt'],D['ORD']])
+        self.Res_a2pol  =  np.zeros([D['N_Delt'],D['ORD']])
+        for n in range(D['N_Delt']):
+            self.Res_Etdshift = np.roll(self.Res_E_td.Etf,self.Res_Deltn[n])
+            self.Res_tdshift  = np.roll(self.Res_E_td.tf,self.Res_Deltn[n]) 
+            self.Res_Edires = self.Res_E_td.Etf+self.Res_E_ti.Etf
+        
+            for m in range(D['ORD']):
+                self.Res_a2harm[n,m] = D['w_0x']*np.trapz(self.Res_E_td.tf,np.real(self.Res_Edires)**(2*m+1))
+                self.Res_a2pol[n,m]  = D['w_0x']*np.trapz(self.Res_E_td.tf,np.real(self.Res_Etdshift)*np.real(self.Res_E_ti.Etf)**(2*m)) 
+        
+        #Consider restructuring this command to include all inside of Q.Sum[n] instead of Q[n].Sum, it will make your life easier.
+            self.Res_QHarm.append(OFunc.Photoinduced_Charge(D['F_0x'][-1],D['F_a'],self.Res_a2harm[n,:],D['Aeff'],D['ORD']))
+            self.Res_QPol.append(OFunc.Delta_Photoinduced_Charge(D['F_0x'][-1],D['F_a'],D['F_a'],self.Res_a2pol[n,:],D['Aeff'],D['ORD']))
+        return() 
+        ## if PlotSelect == "Temporal Overlap Induced Charge"
+        #plot(Delt,real(QHarm(:,:))); fprintf(['\n','Plotting [',PlotSelect{1},']']);
+        #legend(['T_E_i =' num2str((0.5*n-10)*T+T,'#.4g') ')'])
+        #end
+        
+        ## if PlotSelect == "Dual Polarised Induced Charge"
+        #plot(Delt,real(QPol(:,:)));fprintf(['\n','Plotting [',PlotSelect{1},']']);
+        #legend(['T_E_i =' num2str((0.5*n-10)*T+T,'#.4g') ')'])
+        #end

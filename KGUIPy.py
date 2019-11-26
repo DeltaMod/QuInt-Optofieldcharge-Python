@@ -70,7 +70,6 @@ PLTSEL.append(['No Phi'                       ,
                'Phi2'                        , 
                'Phi3'                        ,
                'All_Phi'])
-
 # Make the lists readable through strings - This is done to reduce the number 
 #of compute commands to "find" the correct index using an OptionsBox
 SIMSEL = [str(n)+' - '+SIMSEL[n] for n in range(len(SIMSEL))]
@@ -104,7 +103,8 @@ class KGUI:
         tk.Grid.columnconfigure(root, 2, weight=1)
         tk.Grid.rowconfigure(root, 1, weight=1)
         tk.Grid.rowconfigure(root, 2, weight=1)
-      
+        self.SIMSEL = SIMSEL
+        self.PLTSEL = PLTSEL
         self.VAR = VAR    
         #Creating Graph Frame
         self.GraphPlot = plt.figure(1)
@@ -412,19 +412,20 @@ class KGUI:
         self.SimulationCompleted = True
         
     def Result_Plotter(self):
-        if self.SSV.get() == SIMSEL[0]: #'Simple Photoinduced Charge'
-            if self.PSV.get()   == PLTSEL[0][0]: #'Gaussian Laser Pulse'
+        if self.SSV.get() == self.SIMSEL[0]: #'Simple Photoinduced Charge'
+            if self.PSV.get()   == self.PLTSEL[0][0]: #'Gaussian Laser Pulse'
                 self.Graph_Plotter(self.Res_t,self.Res_Et,'Time','Normalised Field Amplitude',None)
-            elif self.PSV.get() == PLTSEL[0][1]: #'<a^2n+1>'
-                None
-            elif self.PSV.get() == PLTSEL[0][2]: #'Photoinduced Charge'
-                None
-            elif self.PSV.get() == PLTSEL[0][3]: #'<a^2n+1> Term Contributions to Charge'
-                None
+            elif self.PSV.get() == self.PLTSEL[0][1]: #'<a^2n+1>'
+                #If SIMSEL[0], should ensure that a range of Et's are sampled for this result-currently unimplemented
+                self.Graph_Plotter(float(self.VAR_Ncycx.get()),self.Res_a2disp,'Number of Optical Cycles','Vector Potential Momenta',None) 
+            elif self.PSV.get() == self.PLTSEL[0][2]: #'Photoinduced Charge'
+                self.Graph_Plotter(self.Res_Et,self.Res_Q,'Field Strength (F_0x) [Vm^-^1]','Photoinduced Charge',None)
+            elif self.PSV.get() == self.PLTSEL[0][3]: #'<a^2n+1> Term Contributions to Charge'
+                self.Graph_Plotter(float(self.VAR_Ncycx.get()),self.Res_Q,'Number of Optical Cycles','Photoinduced Charge per <a^2n+1> Term',None)
         
-        elif self.SSV.get() == SIMSEL[1]:# 'Dispersion and Photoinduced Charge'
+        elif self.SSV.get() == self.SIMSEL[1]:# 'Dispersion and Photoinduced Charge'
             None
-        elif self.SSV.get() == SIMSEL[2]:# 'Dispersion Grapher' 
+        elif self.SSV.get() == self.SIMSEL[2]:# 'Dispersion Grapher' 
             None
     def Graph_Plotter(self,x,y,xAxName,yAxName,AXLIM):
         self.GraphPlot = plt.clf()
@@ -463,8 +464,7 @@ class KGUI:
                'All_Phi'])Wat
         """
     def Save_Preset(self):
-        print('why is this activating?')
-        Preset = tk.filedialog.asksaveasfile(mode='w', defaultextension=".dat")
+        Preset = tk.filedialog.asksaveasfile(mode='w', defaultextension=".dat") 
         if Preset is None: # asksaveasfile return `None` if dialog closed with "cancel".
             return
         json.dump(self.VAR, open(Preset,'w'))
@@ -477,11 +477,39 @@ class KGUI:
         return(self.EntryList)
     
     def close(self):
-        print('Bye!')
-        json.dump(self.VAR, open("SessionRestore.dat",'w'))
-        root.destroy()
+        reply = tk.messagebox.askyesnocancel("Save Session Before Quitting?", "Save Session Before Quitting?")
+        if reply == True:
+            json.dump(self.VAR, open("SessionRestore.dat",'w'))
+            print('Your session has been spared this time!')
+            root.destroy()
+            plt.close('all')
+            
+            sys.exit()
+            
+
+            
+        elif reply == False:
+            print('Your session is now lost to time!')
+            root.destroy()
+            plt.close('all')
+            sys.exit()
+
+        else:
+            print('Why did you press this button in the first place?')
+            None
+        
+        
+        
+    def Window_Exit_Event(self):
+        if tk.messagebox.askokcancel("Quit", "Do you want to quit?"):
+            json.dump(self.VAR, open("SessionRestore.dat",'w'))
+            root.destroy()
+            sys.exit()
+        
+
 
 root = tk.Tk()
 
 KurgGUI= KGUI(root)
+root.protocol("WM_DELETE_WINDOW", KurgGUI.Window_Exit_Event)
 root.mainloop()
