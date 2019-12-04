@@ -1,1 +1,1 @@
-{"Sim Select": 0, "Plot Select": 0, "f_0x": 0, "f_0y": 0, "Ncycx": 0, "Ncycy": 0, "F_x": 0, "F_y": 0, "t1": 0, "t2": 0, "L": 0, "Aeff": 0, "BPF": 0, "TDn": 0, "Delt1": 0, "Delt2": 0, "ORD": 0, "N": 100, "Mat": "SiO2"}
+{"Sim Select": "0 - Simple Photoinduced Charge", "Plot Select": "0 - Gaussian Laser Pulse", "f_0x": 375, "f_0y": 750, "Ncycx": 1.5, "Ncycy": 8, "F_x": 2.5, "F_y": 2.5, "t1": 0, "t2": 5, "L": 0, "Aeff": 2, "BPF": 0, "TDn": 0, "Delt1": 0, "Delt2": 0, "ORD": 2, "N": 1000, "Mat": "SiO2"}

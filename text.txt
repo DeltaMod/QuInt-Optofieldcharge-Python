@@ -1,1 +1,0 @@
-{"Sim Select": 0, "Plot Select": 0, "f_0x": 0, "f_0y": 0, "Ncycx": 0, "Ncycy": 0, "F_x": 0, "F_y": 0, "t1": 0, "t2": 0, "L": 0, "Aeff": 0, "BPF": 0, "TDn": 0, "Delt1": 0, "Delt2": 0, "ORD": 0, "N": 100, "Mat": "SiO2"}

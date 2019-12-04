@@ -9,30 +9,28 @@ import OFunc
 import numpy as np
 from OFunc import FFTD as FFTD
 
-from scipy.constants import c as c                     #m/s
-from scipy.constants import epsilon_0 as eps_0         #m**-3kg**-1s**4A**2    - Permittivity of free space
 
-def Calculate_Dispersion(self,D):
-    
-    D['F_0x']      = np.linspace(0,2.5,1+int(( 2.5 / 0.05)))*10**10   #Vm**-1              - Optical Field
+
+def Calculate_Dispersion(self):
+    from scipy.constants import c as c                     #m/s
+    from scipy.constants import epsilon_0 as eps_0         #m**-3kg**-1s**4A**2    - Permittivity of free space
+    D = self.VAR.copy()
+    F_x           = D['F_x']*10**10        #Vm**-1            - Optical Field
+    F_y           = D['F_y']*10**10        #Vm**-1            - Optical Field
     ## -- Variable Parameters -- ##
-    D['f_0x']     = 375*10**12              #Hz                - D['L']aser frequency (From our lab) 
-    D['f_0y']     = 375*10**12*2            #Hz                - D['L']aser frequency (first Harmonic) 
-    D['lambda_0'] = c/D['f_0x']                 # m
-    D['w_0x']     = 2*np.pi*D['f_0x']            #Rad/s             - D['L']aser Frequency
-    D['w_0y']     = 2*np.pi*D['f_0y']            #Rad/s             - D['L']aser Frequency
-    D['Aeff']     = 2.3*10**-12             # m**2              - Effective area 
-    D['Ncycx']    = 1.5                    # no unit          - Number of optical cycles in the pulse?s FWHM (Khurgin uses 1.7 in the paper)
-    D['Ncycy']    = 1.5                    # no unit          - Number of optical cycles in the pulse?s FWHM (Khurgin uses 1.7 in the paper)
-    D['F_a']      = 5.36*10**10             # Vm**-1            - Atomic Field
-    D['L']        = 0.1                    # mm               - D['L']ength of material dispersion
+    f_0x          = D['f_0x']*10**12       #Hz                - Laser frequency (From our lab) 
+    f_0y          = D['f_0y']*10**12       #Hz                - Laser frequency (first Harmonic) 
+    D['lambda_0'] = c/f_0x                 # m
+    D['w_0x']     = 2*np.pi*f_0x           #Rad/s             - Laser Frequency
+    D['w_0y']     = 2*np.pi*f_0y           #Rad/s             - Laser Frequency
+    Aeff          = D['Aeff']*10**-12      # m**2             - Effective area 
+    D['F_a']      = 5.36*10**10            # Vm**-1           - Atomic Field
     
-    #Calculate the Material Properties of your Selected Material#                   
-    D[D['Mat']] = OFunc.MaterialProperties(D['lambda_0'],D['Mat'])
+    #Calculate the Material Properties of your Selected Material#     
+             
+    D[D['Mat']] = OFunc.Material_Properties(D['lambda_0'],D['Mat'])
     D[D['Mat']].DispCoeff(D['L'])
 
-    D['ORD']     = 5 
-    D['BPF']     = 0
     D['A_t']      = 1                      # no unit           - Amplitude
     D['A_w']      = 1                      # no unit           - Amplitude
     ## -- Defining the Electromagnetic Field Transient -- ##
@@ -41,7 +39,9 @@ def Calculate_Dispersion(self,D):
     #Documentation claims that: ???t=4ln(2), that is W*T = 4*log(2) which means we get:
     D['W_x']    = 4*np.log(2)/D['T_x']
     D['W_y']    = 4*np.log(2)/D['T_y']
-    D['t1']  = 0; D['t2'] = 15*D['T_x']; D['t_0'] = (D['t2']+D['t1'])/2
+    D['t1']     = D['t1']*10**-15
+    D['t2']     = D['t2']*10**-15
+    D['t_0'] = (D['t2']+D['t1'])/2
     #D['N']    = 100
     self.Res_t    = np.linspace(D['t1'],D['t2'],D['N'])             # Seconds - Time
     Dt   = (D['t2']-D['t1'])                       # Sampling interval
@@ -62,12 +62,9 @@ def Calculate_Dispersion(self,D):
     
     #%%  Define separate Et and Ew series based on input variables #%% 
     D['theta'] = OFunc.Phase_Offset(0)
-    D['phiw'] = OFunc.Dispersion_Factor(D[D['Mat']].phi,D['w'],D['w_0x'])
+    D['phiw']  = OFunc.Dispersion_Factor(D[D['Mat']].phi,D['w'],D['w_0x'])
     
-    f = open("SessionRestore.txt","w")
-    f.write( str(D) )
-    f.close()
-    self.Res_Et = OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_x'],D['w_0x'],D['theta']) 
+    self.Res_Et = OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_x'],D['w_0x'],D['theta'])
     self.Res_Ew = OFunc.FDGE(D['A_w'],D['w'],D['W_x'],D['w_0x'],D['phiw'])
 
     #Note: These are related to each other by: \delta w*\delta t =4ln(2), that is W*T = 4*log(2) which means we get: W  = 4*log(2)/T
@@ -79,6 +76,7 @@ def Calculate_Dispersion(self,D):
     # end
     
     ## -- E_t -> FFT = E_w -> Band Filter + IFFT = E_t -- ## 
+    
     self.Res_Estr = OFunc.FFTD(self.Res_t,self.Res_Et,D['w_0x'],D[D['Mat']].phi) #This generates:  | Estr.ttt.Et & Estr.ttt.t | Estr.ttt.Ew & Estr.ttf.w | Estr.ttt.Etdisp & Estr.ttt.tdisp|
     self.Res_Estr.ttt(D['theta'])
     
@@ -109,22 +107,24 @@ def Calculate_Dispersion(self,D):
     ## -- Calculating <a^2n+1> for a dispersed pulse -- ##
     self.Res_a2disp = OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_Estr.tf,self.Res_Estr.Etf,D['ORD']) 
     ## -- Equation 17 -- ##
-    #fun_Q2 = @(D['F_0x'],D['F_a'],a2disp,D['Aeff']) eps_0*D['F_0x'].*(D['F_0x']/D['F_a'])**2.*(a2disp(1) +(D['F_0x']/D['F_a'])**2*a2disp(2)...
-    #                                   +(D['F_0x']/D['F_a'])**4*a2disp(3)+(D['F_0x']/D['F_a'])**6*a2disp(4)+(D['F_0x']/D['F_a'])**8*a2disp(5))*D['Aeff']
-    #Q = fun_Q2(F_0,D['F_a'],a2disp,D['Aeff'])
-    self.Res_Q = OFunc.Photoinduced_Charge(D['F_0x'],D['F_a'],self.Res_a2disp,D['Aeff'],D['ORD'])
+    #fun_Q2 = @(f_0x,D['F_a'],a2disp,Aeff) eps_0*Ff_0x.*(f_0x/D['F_a'])**2.*(a2disp(1) +(f_0x/D['F_a'])**2*a2disp(2)...
+    #                                   +(f_0x/D['F_a'])**4*a2disp(3)+(f_0x/D['F_a'])**6*a2disp(4)+(f_0x/D['F_a'])**8*a2disp(5))*Aeff
+    #Q = fun_Q2(F_0,D['F_a'],a2disp,Aeff)
+    self.Res_Q = OFunc.Photoinduced_Charge(f_0x,D['F_a'],self.Res_a2disp,Aeff,D['ORD'])
     self.Res_Etf2n = [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])]
-    
+    self.Res_VAR = D
     if self.SSV.get() == self.SIMSEL[0]:
-        self.Ncycxarray = np.linspace(0,D['Ncycx'],D['N'])
+        self.Ncycxarray = np.linspace(0.01,D['Ncycx'],D['N'])
         T_xarray = (self.Ncycxarray*2*np.pi)/D['w_0x']
-        self.F_0xarray = np.linspace(0,D['F_x'],D['N'])
-        self.Res_Et = OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],T_xarray,D['w_0x'],D['theta']) 
-        self.Res_a2disp = OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et,D['ORD']) 
-        self.Res_Q = OFunc.Photoinduced_Charge(D['F_0x'],D['F_a'],self.Res_a2disp,D['Aeff'],D['ORD'])
-        self.Res_Etf2n = [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])]    
+        self.F_0xarray = np.linspace(0,F_x,D['N'])
+        self.Res_Et = []
+        for m in range(D['N']):
+            self.Res_Et.append(np.array([np.power(OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],T_xarray[m],D['w_0x'],D['theta']),(2*n+1)) for n in range(D['ORD'])]))
+        self.Res_a2disp = np.array([OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et[m],D['ORD'])] for m in range(D['N']))
+        self.Res_Q = np.array([OFunc.Photoinduced_Charge(f_0x,D['F_a'],self.Res_a2disp[m],Aeff,D['ORD'])]for m in range(D['N']))
+        self.Res_Etf2n = np.array([  [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])] for m in range(D['N']) ])    
     if self.SSV.get() == self.SIMSEL[1]:
-        
+        None
         ## if PlotSelect == "E_t(t)^2n+1 After Dispersion"
         #plot(Estr.ttt.tdisp,Etf2n(:,:),'D['L']ineWidth',1.3)
         #end
@@ -155,19 +155,19 @@ def Calculate_Dispersion(self,D):
         #end
         
         ## -- Dual Pulses with Temporal Delay Delt -- ##
-        #The driving pulse (field D['F_0x']) Ed(t)  Ed(t) (Oscillation direction is between plates)
+        #The driving pulse (field f_0x) Ed(t)  Ed(t) (Oscillation direction is between plates)
         #And the Injection Pulse (field F_y)  Ei(t) (Oscillation direction is perpendicular to the plates)
-        #Here: a(t) represents the Driving pulse (D['F_0x']) and a^2n represents the Injection pulse (F_y
+        #Here: a(t) represents the Driving pulse (f_0x) and a^2n represents the Injection pulse (F_y
         
         #w_d = D['w_0x']; w_i = D['w_0y']; # w_d, the weaker driving pulse (D['w_0x']), and w_i, the stronger injection pulse (D['w_0y'])
         #W_d = W  ; W_i = D['W_y']; #Respective FWHM for each
         
         ## Dual Polarisation Equation ##
-        #fun_QD['Delt2'] = @(D['F_0x'],F_y,a2n,D['Aeff']) eps_0.*D['F_0x'].*(F_y/D['F_a'])**2*(1/3 * a2n(1)+...
+        #fun_QD['Delt2'] = @(f_0x,F_y,a2n,Aeff) eps_0.*f_0x.*(F_y/D['F_a'])**2*(1/3 * a2n(1)+...
         #                                                              1/5 * a2n(2).*(F_y./D['F_a'])**2+...
         #                                                              1/7 * a2n(3).*(F_y./D['F_a'])**4+...
-        #                                                              1/9 QPol2(n) = fun_QDelt(F_0(end)/12.5,F_0(end)/1.25,D['F_a'],a2pol(n,:),D['Aeff'],D['ORD'])  * a2n(4).*(F_y./D['F_a'])**6+...
-        #                                                              1/11* a2n(5).*(F_y./D['F_a'])**8)*D['Aeff']; 
+        #                                                              1/9 QPol2(n) = fun_QDelt(F_0(end)/12.5,F_0(end)/1.25,D['F_a'],a2pol(n,:),Aeff,D['ORD'])  * a2n(4).*(F_y./D['F_a'])**6+...
+        #                                                              1/11* a2n(5).*(F_y./D['F_a'])**8)*Aeff; 
                                                              
         D['N_Delt'] = int(D['Delt2'] - D['Delt1'] + 1)
         self.Res_Deltn  = np.linspace(D['Delt1'],D['Delt2'],D['N_Delt']).round().astype(int)
@@ -190,8 +190,8 @@ def Calculate_Dispersion(self,D):
                 self.Res_a2pol[n,m]  = D['w_0x']*np.trapz(self.Res_E_td.tf,np.real(self.Res_Etdshift)*np.real(self.Res_E_ti.Etf)**(2*m)) 
         
         #Consider restructuring this command to include all inside of Q.Sum[n] instead of Q[n].Sum, it will make your life easier.
-            self.Res_QHarm.append(OFunc.Photoinduced_Charge(D['F_0x'][-1],D['F_a'],self.Res_a2harm[n,:],D['Aeff'],D['ORD']))
-            self.Res_QPol.append(OFunc.Delta_Photoinduced_Charge(D['F_0x'][-1],D['F_a'],D['F_a'],self.Res_a2pol[n,:],D['Aeff'],D['ORD']))
+            self.Res_QHarm.append(OFunc.Photoinduced_Charge(f_0x[-1],D['F_a'],self.Res_a2harm[n,:],Aeff,D['ORD']))
+            self.Res_QPol.append(OFunc.Delta_Photoinduced_Charge(f_0x[-1],D['F_a'],D['F_a'],self.Res_a2pol[n,:],Aeff,D['ORD']))
         return() 
         ## if PlotSelect == "Temporal Overlap Induced Charge"
         #plot(Delt,real(QHarm(:,:))); fprintf(['\n','Plotting [',PlotSelect{1},']']);
@@ -202,3 +202,5 @@ def Calculate_Dispersion(self,D):
         #plot(Delt,real(QPol(:,:)));fprintf(['\n','Plotting [',PlotSelect{1},']']);
         #legend(['T_E_i =' num2str((0.5*n-10)*T+T,'#.4g') ')'])
         #end
+        
+    self.VAR_SimulationCompleted.set(True) 

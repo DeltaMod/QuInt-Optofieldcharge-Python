@@ -2,7 +2,6 @@
 """
 OFunc - A function transfer from Matlab
 """
-
 import numpy as np
 import sympy as sp
 from scipy.constants import c
@@ -77,7 +76,7 @@ def TDGE(A_t,t,t_0,T,w_0x,theta):
     we can simplify E(t) to instead exclude the complex conjugate (c.c.)
     np.sqrt( A_t*np.exp(-np.log(2)*((2*(t-t_0))/(T))**2))*np.exp(-1.j*(w_0x*(t-t_0)+theta)) + c.c
     """
-    return(np.sqrt( A_t*np.exp(-np.log(2)*((2*(t-t_0))/(T))**2))*np.exp(-1.j*(w_0x*(t-t_0)+theta)))
+    return(np.real(A_t*np.exp(-2*np.log(2)*(((t-t_0))/(T))**2)*np.exp(-1.j*(w_0x*(t-t_0)+theta))))
 
 def FDGE(A_w,w,W,w_0x,psi):
     """
@@ -146,7 +145,7 @@ class FFTD(object):
          self.t    = self.x              # Time Axis
          self.t_0  = np.mean(self.t)     # Centre Time Axis (mean of axis)
          I         = self.y
-         self.Eti  = I/max(I)             # Normalise E(t) to a(t)
+         self.Eti  = I/max(abs(I))             # Normalise E(t) to a(t)
          t1        = self.t[0]           # Start Time
          t2        = self.t[-1]          # End Time 
          Dt        = (t2-t1)             # Sampling interval
@@ -172,7 +171,7 @@ class FFTD(object):
          N = self.N                     # Length of series
          self.w      = self.x           # Frequency Axis (iff type = ftt)
          A           = self.y 
-         self.Ew     = A/max(A)          #Note: The current Ew equation includes the phi component, so you must change that to apply a different dispersion.
+         self.Ew     = A/max(abs(A))          #Note: The current Ew equation includes the phi component, so you must change that to apply a different dispersion.
          w1 = self.w[0]                  # Highest Freq
          #w2 = self.w[-1]                 # Lowest Freq
          #Dw   = w2 - w1                  # Frequency Difference
@@ -208,7 +207,7 @@ class FFTD(object):
          self.t    = self.x              # Time Axis
          self.t_0  = np.mean(self.t)     # Centre Time Axis (mean of axis)
          I         = self.y
-         self.Eti  = I/max(I)             # Normalise E(t) to a(t)
+         self.Eti  = I/max(abs(I))             # Normalise E(t) to a(t)
          t1         = self.t[0]           # Start Time
          t2         = self.t[-1]          # End Time 
          Dt         = (t2-t1)             # Sampling interval
@@ -244,17 +243,17 @@ class FFTD(object):
                                      '\\phi_2 = '+str(self.phi[2])+'\n'+
                                      '\\phi_3 = '+str(self.phi[3])+'\n')
 #%%
-class MaterialProperties(object):
+class Material_Properties(object):
     """
     Usage:                                                                             
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                                                                      
-     First run Mat = MaterialProperties(LAMBD,MATERIAL)                      
+     First run Mat = Material_Properties(LAMBD,MATERIAL)                      
      Then  run self.DispCoeff(L) to give Mat its dispersion coefficients     
                                                                              
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  
       A standard use case would be:                                           
            WL = 7.994465546666666e-07                                        
-           B = MaterialProperties(WL,'SiO2')                                
+           B = Material_Properties(WL,'SiO2')                                
            B.DispCoeff(10**-3)                                              
            BDict=B.__dict__     #This shows it in variable exporer          
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  
@@ -295,7 +294,7 @@ class MaterialProperties(object):
             #GD    = 1/((c/RI)/(1 - (LAMBD/n_ref) * nd1)) * 1000;                                 #units s/mm
             #GVD   = (LAMBD**3)/(2 * pi * c**2) * nd2 * 1000;                                     #units s**2/mm
             #TOD   = -((LAMBD)/(2 * pi() * c))**2 * 1/c * (3*LAMBD**2*nd2+LAMBD**3*nd3) * 1000;   #units s**3/mm
-            
+             
             #Output Calculate terms dispersion factor
             self.CD  = L*(0.025+self.nd1)*10**6;                                                    #      - Cromatic dispersion
             self.GD  = L*1/((c/self.n)/(1 - (self.WL/self.n) * self.nd1)) * 1000                              # s**2 - Group Delay
