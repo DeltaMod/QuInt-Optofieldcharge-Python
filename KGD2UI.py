@@ -113,17 +113,17 @@ def Calculate_Dispersion(self):
     self.Res_Q = OFunc.Photoinduced_Charge(f_0x,D['F_a'],self.Res_a2disp,Aeff,D['ORD'])
     self.Res_Etf2n = [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])]
     self.Res_VAR = D
-    if self.SSV.get() == self.SIMSEL[0]:
+    if self.VAR_Sim_Select.get() == self.SIMSEL[0]:
         self.Ncycxarray = np.linspace(0.01,D['Ncycx'],D['N'])
         T_xarray = (self.Ncycxarray*2*np.pi)/D['w_0x']
         self.F_0xarray = np.linspace(0,F_x,D['N'])
         self.Res_Et = []
         for m in range(D['N']):
             self.Res_Et.append(np.array([np.power(OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],T_xarray[m],D['w_0x'],D['theta']),(2*n+1)) for n in range(D['ORD'])]))
-        self.Res_a2disp = np.array([OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et[m],D['ORD'])] for m in range(D['N']))
+        self.Res_a2disp = [np.array(OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et[m],D['ORD'])) for m in range(D['N'])]
         self.Res_Q = np.array([OFunc.Photoinduced_Charge(f_0x,D['F_a'],self.Res_a2disp[m],Aeff,D['ORD'])]for m in range(D['N']))
         self.Res_Etf2n = np.array([  [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])] for m in range(D['N']) ])    
-    if self.SSV.get() == self.SIMSEL[1]:
+    if self.VAR_Sim_Select.get() == self.SIMSEL[1]:
         None
         ## if PlotSelect == "E_t(t)^2n+1 After Dispersion"
         #plot(Estr.ttt.tdisp,Etf2n(:,:),'D['L']ineWidth',1.3)
