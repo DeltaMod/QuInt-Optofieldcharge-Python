@@ -66,7 +66,7 @@ def Calculate_Dispersion(self):
     
     self.Res_Et = OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],D['T_x'],D['w_0x'],D['theta'])
     self.Res_Ew = OFunc.FDGE(D['A_w'],D['w'],D['W_x'],D['w_0x'],D['phiw'])
-
+    self.Res_w= D['w']
     #Note: These are related to each other by: \delta w*\delta t =4ln(2), that is W*T = 4*log(2) which means we get: W  = 4*log(2)/T
     #T = (D['Ncycx']*2*pi())/D['w_0x'] => W = 4*log(2)*D['w_0x']/(D['Ncycx']*2*pi()) 
     
