@@ -53,8 +53,9 @@ SIMSEL = ['Simple Photoinduced Charge',
 
 PLTSEL =      [['Gaussian Laser Pulse',        
                '<a^2n+1>',                     
-               'Photoinduced Charge' ,         
-               '<a^2n+1> Term Contributions to Charge']];
+               'Photoinduced Charge at F_x' ,         
+               '<a^2n+1> Term Contributions to Charge at Ncycx',
+               '<a^2n+1> Term Contributions to Charge at F_0x']];
 PLTSEL.append(['Non Fourier Et(t)'           ,
                'E_t FFT Plot'                 ,
                'E_t Final Applied Dispersion' ,
@@ -82,7 +83,7 @@ for i in range(len(PLTSEL)):
 
 PLTSELLen = len(max(PLTSEL, key=len))
 SIMSELLen = len(max(SIMSEL, key=len))
-SelBoxLen = max([PLTSELLen,SIMSELLen])
+SelBoxLen = max([PLTSELLen,SIMSELLen])+10
 
 VAR = {'Sim_Select':'0 - Simple Photoinduced Charge','Plot_Select': '0 - Gaussian Laser Pulse',
             'f_0x':0,'f_0y':0, 'Ncycx':0, 'Ncycy':0, 'F_x':0, 'F_y':0, 't1':0, 't2':0, 'L':0, 'Aeff':0,
@@ -194,7 +195,7 @@ class KGUI:
         ROWSIMSEL = 0; COLSIMSEL = 4; 
         ROWPLTSEL = 2; COLPLTSEL = 4;
         ROWRESET  = 4; COLRESET  = 5;
-        ROWCLOSE  = 4; COLCLOSE  = 10;
+        ROWCLOSE  = 4; COLCLOSE  = 8;
         ROWRUN    = 4; COLRUN    = 0;
         #Column for unit labels
         COLUNITS = 11;
@@ -202,6 +203,10 @@ class KGUI:
         
         #root.update()
         #print(self.EB_Frame.winfo_width())
+        for i in range(0,COLCLOSE):
+            self.RSFrame.grid_columnconfigure(i, weight=1)
+        for j in range(0,ROWCLOSE):
+            self.RSFrame.grid_rowconfigure(j, weight=1)
         for i in range(0,ROWSLD,2):
             self.EB_Frame.grid_rowconfigure(i, weight=1,uniform='fred')
         for j in range(0,9):
@@ -365,7 +370,7 @@ class KGUI:
         #Generating Simulation Selector options menu
         self.EB_Sim_Select= tk.OptionMenu(self.RSFrame, self.VAR_Sim_Select, *SIMSEL)
         tk.Label(self.RSFrame, text="Select a Simulation",relief='flat',anchor='w',bg=LabelBG).grid(row = ROWSIMSEL, column = 0,sticky='we')
-        self.EB_Sim_Select.grid(row = ROWSIMSEL, column =COLSIMSEL,columnspan=10,sticky='w')
+        self.EB_Sim_Select.grid(row = ROWSIMSEL, column =COLSIMSEL,columnspan=10,sticky='ew')
         self.EB_Sim_Select.config(width = SelBoxLen,bg=ButtonBG,activebackground =ButtonABG)
         self.EB_Sim_Select["menu"].config(bg=ButtonABG)
         def PLT_DDGen(self):
@@ -375,11 +380,11 @@ class KGUI:
             #Generating Plot_Selector options menu
             self.EB_Plot_Select= tk.OptionMenu(self.RSFrame, self.VAR_Plot_Select, *PLTSEL[int(self.VAR_Sim_Select.get()[0])])
             tk.Label(self.RSFrame, text="Select a Plot",relief ='flat',anchor='w',bg=LabelBG ).grid(row = ROWPLTSEL, column = 0,sticky='we')
-            self.EB_Plot_Select.grid(row = ROWPLTSEL, column =COLPLTSEL,columnspan=5,sticky='w')
+            self.EB_Plot_Select.grid(row = ROWPLTSEL, column =COLPLTSEL,columnspan=5,sticky='ew')
             self.EB_Plot_Select.config(width = SelBoxLen,bg=ButtonBG,activebackground =ButtonABG)
             self.EB_Plot_Select["menu"].config(bg=ButtonABG)
             
-        PLT_DDGen(self)   
+        PLT_DDGen(self)
         
         def SIM_DDChange(*args):
             self.VAR['Sim_Select'] = self.VAR_Sim_Select.get()
@@ -421,7 +426,7 @@ class KGUI:
          
         #Close Button
         self.close_button = tk.Button(self.RSFrame, text='Close', command=self.close)
-        self.close_button.grid(row = ROWCLOSE,column = COLCLOSE,sticky='w')
+        self.close_button.grid(row = ROWCLOSE,column = COLCLOSE,sticky='e')
         
         #Reset Button
         self.reset_button = tk.Button(self.RSFrame, text='Reset', command=self.reset)
@@ -477,19 +482,81 @@ class KGUI:
     def Result_Plotter(self):
         if self.VAR_Sim_Select.get() == self.SIMSEL[0]: #'Simple Photoinduced Charge'
             if self.VAR_Plot_Select.get()   == self.PLTSEL[0][0]: #'Gaussian Laser Pulse'
-                self.Graph_Plotter(self.Res_t,self.Res_Et[-1],'Time','Normalised Field Amplitude',None,None)
+                self.Graph_Plotter(self.Res_t,self.Res_Et[-1],'time [s]','Normalised Field Amplitude',None,None)
+                
             elif self.VAR_Plot_Select.get() == self.PLTSEL[0][1]: #'<a^2n+1>'
                 self.Graph_Plotter(self.Ncycxarray,self.Res_a2disp,'Number of Optical Cycles','Vector Potential Momenta',None,None) 
+                
             elif self.VAR_Plot_Select.get() == self.PLTSEL[0][2]: #'Photoinduced Charge'
-                self.Graph_Plotter(self.Res_Et,self.Res_Q,'Field Strength (F_0x) [Vm^-^1]','Photoinduced Charge',None,None)
-            elif self.VAR_Plot_Select.get() == self.PLTSEL[0][3]: #'<a^2n+1> Term Contributions to Charge'
-                self.Graph_Plotter(self.Ncycxarray,self.Res_Q,'Number of Optical Cycles','Photoinduced Charge per <a^2n+1> Term',None,None)
+                self.Graph_Plotter(self.Ncycxarray,self.Res_Q.Sum,'Number of Optical Cycles','Photoinduced Charge at F_0x = '+str(self.VAR['F_x'])+' [V/m]',None,None)
+            
+            elif self.VAR_Plot_Select.get() == self.PLTSEL[0][3]: #'<a^2n+1> Term Contributions to Charge at Ncycx'
+                self.Graph_Plotter(self.F_0xarray,self.Res_Q.Terms_ord,'Optical Field Strength','Photoinduced Charge per <a^2n+1> at Ncycx = '+str(self.VAR['Ncycx']),None,None)    
+            
+            elif self.VAR_Plot_Select.get() == self.PLTSEL[0][4]: #'<a^2n+1> Term Contributions to Charge at Ncycx'
+                self.Graph_Plotter(self.Ncycxarray,self.Res_Q.Terms_ord,'Number of Optical Cycles','Photoinduced Charge per <a^2n+1> at F_0x = '+str(self.Res_VAR['F_x']),None,None)
         
         elif self.VAR_Sim_Select.get() == self.SIMSEL[1]:# 'Dispersion and Photoinduced Charge'
-            None
+             if self.VAR_Plot_Select.get()   == self.PLTSEL[1][0]:  #0 - 'Non Fourier Et(t)',
+
+                 self.Graph_Plotter(self.Res_t,self.Res_Et,'time [s]','Non Dispersed $E_t(t)$',None,None)
+                 pass 
+             elif self.VAR_Plot_Select.get()   == self.PLTSEL[1][1]:  #1 - 'E_t FFT Plot' , 1 - 'E_t FFT Plot' , 
+                 #xlabel('$\omega$ [rad/s]'); ylabel('Amplitude')
+                 self.Graph_Plotter(self.Res_Ew,self.Res_Ew,'time [s]','Non Dispersed $E_t(t)$',None,None)
+                 pass 
+             elif  self.VAR_Plot_Select.get()   == self.PLTSEL[1][2]: #2 - 'E_t Final Applied Dispersion'  
+                 #xlabel('Time [fs]');  ylabel('Amplitude')
+
+                 pass
+             elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][3]: # 3 - 'E_t(t)^2n+1 After Dispersion' 
+                 #xlabel('Optical Cycle $\left(\frac{t-t_0}{T}\right)$'); ylabel('Vector Potential (and $a^{2n+1}$)')
+                 pass
+             
+             elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][4]:  # 4 - 'Post Dispersion Photoinduced Charge'
+                 #xlabel('Optical Field [Vm$^{-1}$]'); ylabel('Photinduced Charge [fC]')    
+                 pass
+             
+             elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][5]:  # 5 - 'E_w IFFT Dispersion' 
+                 #xlabel('Time [s]'); ylabel('Amplitude')
+                 pass
+             
+             elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][6]:  # 6 - 'Current Pulse Overlap at given Delta t',
+                 #xlabel('$\Delta t$ [s]'); ylabel('Sum of Vector Potential')
+                 pass
+             
+             elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][7]:  # 7 - Temporal Overlap Induced Charge',
+                  #xlabel('$\Delta t$ [fs]'); ylabel('$Q(\Delta t$ [C])')   
+                 pass
+             
+             elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][8]:  # 8 - 'Dual Polarised Induced Charge'
+                 #xlabel('$\Delta t$ [s]'); ylabel('Vector Potential Momenta')
+                 pass
+
         elif self.VAR_Sim_Select.get() == self.SIMSEL[2]:# 'Dispersion Grapher' 
-            None
+             if self.VAR_Plot_Select.get()   ==   self.PLTSEL[2][0]:  # 0 - 'No Phi'
+                 #xlabel('Time [fs]'); ylabel('Amplitude')
+                 pass
+             
+             if self.VAR_Plot_Select.get()   ==   self.PLTSEL[2][1]:  # 1 - 'Phi 0'
+                 pass
+             
+             if self.VAR_Plot_Select.get()   ==   self.PLTSEL[2][2]:  # 2 - 'Phi 1'
+                 pass
+             
+             if self.VAR_Plot_Select.get()   ==   self.PLTSEL[2][3]:  # 3 - 'Phi 2'
+                 pass
+             
+             if self.VAR_Plot_Select.get()   ==   self.PLTSEL[2][4]:  # 4 - 'Phi 3'
+                 pass
+             
+             if self.VAR_Plot_Select.get()   ==   self.PLTSEL[2][5]:  # 5 - 'All_Phi' 
+                 pass
+            
     def Graph_Plotter(self,x,y,xAxName,yAxName,Legend,AXLIM):
+        x = np.asarray(x)
+        y = np.asarray(y)
+        
         DIMx = np.array(x.shape)
         DIMy = np.array(y.shape)
         self.GraphPlot = plt.clf()
@@ -507,7 +574,7 @@ class KGUI:
                 self.GraphPlot = plt.plot(x[n],np.real(y))
         else: 
             self.GraphPlot = plt.plot(x,np.real(y))
-        
+            
         if Legend != None:
             plt.Legend(Legend,location='best')
         plt.xlabel(xAxName)
@@ -522,6 +589,7 @@ class KGUI:
             None
         self.GCanv.draw()
         plt.tight_layout()
+        
                 
         """
         SIMSEL = ['Simple Photoinduced Charge',

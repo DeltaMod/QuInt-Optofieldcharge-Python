@@ -56,13 +56,19 @@ def Dispersion_Factor(PHI,w,w_0):
             ErrCode('TypeError: PHI is type int, make sure that PHI = np.array(phi0,phi1,phi2,phi3)')
         else:
            raise
+
      
 def Vec_Pot_Mom(w_0x,t,Et,Order):
     """
     A function that calculates the wave asymmetry, and consequently the vector potential momenta, of any input 
     Usage:  Vec_Pot_Mom(w_0x,t,Et,Order) = a2disp(1:order) = w_0x*trapz(Estr.ttt.tdisp,real(Estr.ttt.Etdisp).^(2*1:order+1));
     """
-    VPM = [w_0x*np.trapz(t,np.real(Et)**(2*n+1)) for n in range(Order)]
+    if type(Et) != list:
+        VPM = [w_0x*np.trapz(t,np.real(Et)**(2*n+1)) for n in range(Order)]
+    elif type(Et) == list:
+        VPM = []
+        for m in range(Order):
+            VPM.append(np.array([w_0x*np.trapz(t,np.real(Et[n][m])) for n in range(len(Et))]))
     return(VPM)
     
 def TDGE(A_t,t,t_0,T,w_0x,theta):
@@ -307,10 +313,22 @@ class Material_Properties(object):
         
 class Photoinduced_Charge(object):
     def __init__(self,F_0x,F_a,a2disp,Aeff,Order):
-        self.TermNames = ['a'+str(2*n+1) for n in range(Order)]     
-        self.Terms     = [Aeff*eps_0*F_0x*(F_0x/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]             
-        self.Sum       = sum(self.Terms)
-        
+        if len(a2disp) == Order and type(a2disp[0]) != np.ndarray:
+            self.TermNames = ['a'+str(2*n+1) for n in range(Order)]     
+            self.Terms_ord = [Aeff*eps_0*F_0x*(F_0x/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]            
+            self.Sum       = sum(self.Terms_ord)
+        else:
+            if max(np.asarray(a2disp).shape) != Order:
+                N = max(np.asarray(a2disp).shape)
+            else:
+                N = min(np.asarray(a2disp).shape)
+            self.TermNames = ['a'+str(2*n+1) for n in range(Order)]     
+            self.Terms_ord = [Aeff*eps_0*F_0x[-1]*(F_0x[-1]/F_a)**(2*(n-1)+2)*a2disp[n] for n in range(Order)]
+            self.Terms_cyc =  np.fliplr(np.rot90(self.Terms_ord,-1))
+            self.Sum = []
+            for n in range(N):
+                self.Sum.append(sum(self.Terms_cyc[n]))    
+                    
 class Delta_Photoinduced_Charge(object):
     def __init__(self,F_0x,F_0y,F_a,a2disp,Aeff,Order):      
         self.TermNames = ['a'+str(2*n+1) for n in range(Order)]

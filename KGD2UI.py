@@ -43,7 +43,7 @@ def Calculate_Dispersion(self):
     D['t2']     = D['t2']*10**-15
     D['t_0'] = (D['t2']+D['t1'])/2
     #D['N']    = 100
-    self.Res_t    = np.linspace(D['t1'],D['t2'],D['N'])             # Seconds - Time
+    self.Res_t    = np.linspace(D['t1'],D['t2'],D['N'])# Seconds - Time
     Dt   = (D['t2']-D['t1'])                       # Sampling interval
     dt   = Dt/D['N']  
     D['w_t1'] = 2*np.pi/Dt; D['w_t2'] = 2*np.pi/dt   # Min-Max Frequency from time graph
@@ -120,8 +120,8 @@ def Calculate_Dispersion(self):
         self.Res_Et = []
         for m in range(D['N']):
             self.Res_Et.append(np.array([np.power(OFunc.TDGE(D['A_t'],self.Res_t,D['t_0'],T_xarray[m],D['w_0x'],D['theta']),(2*n+1)) for n in range(D['ORD'])]))
-        self.Res_a2disp = [np.array(OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et[m],D['ORD'])) for m in range(D['N'])]
-        self.Res_Q = np.array([OFunc.Photoinduced_Charge(f_0x,D['F_a'],self.Res_a2disp[m],Aeff,D['ORD'])]for m in range(D['N']))
+        self.Res_a2disp = OFunc.Vec_Pot_Mom(D['w_0x'],self.Res_t,self.Res_Et,D['ORD']) 
+        self.Res_Q      = OFunc.Photoinduced_Charge(self.F_0xarray,D['F_a'],self.Res_a2disp,Aeff,D['ORD'])
         self.Res_Etf2n = np.array([  [np.real(self.Res_Estr.Etf)]+[np.real(self.Res_Estr.Etf)**(2*n+1) for n in range(D['ORD'])] for m in range(D['N']) ])    
     if self.VAR_Sim_Select.get() == self.SIMSEL[1]:
         None
@@ -190,8 +190,8 @@ def Calculate_Dispersion(self):
                 self.Res_a2pol[n,m]  = D['w_0x']*np.trapz(self.Res_E_td.tf,np.real(self.Res_Etdshift)*np.real(self.Res_E_ti.Etf)**(2*m)) 
         
         #Consider restructuring this command to include all inside of Q.Sum[n] instead of Q[n].Sum, it will make your life easier.
-            self.Res_QHarm.append(OFunc.Photoinduced_Charge(f_0x[-1],D['F_a'],self.Res_a2harm[n,:],Aeff,D['ORD']))
-            self.Res_QPol.append(OFunc.Delta_Photoinduced_Charge(f_0x[-1],D['F_a'],D['F_a'],self.Res_a2pol[n,:],Aeff,D['ORD']))
+            self.Res_QHarm.append(OFunc.Photoinduced_Charge(f_0x,D['F_a'],self.Res_a2harm[n,:],Aeff,D['ORD']))
+            self.Res_QPol.append(OFunc.Delta_Photoinduced_Charge(f_0x,D['F_a'],D['F_a'],self.Res_a2pol[n,:],Aeff,D['ORD']))
         return() 
         ## if PlotSelect == "Temporal Overlap Induced Charge"
         #plot(Delt,real(QHarm(:,:))); fprintf(['\n','Plotting [',PlotSelect{1},']']);

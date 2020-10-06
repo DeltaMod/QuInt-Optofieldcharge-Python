@@ -1,1 +1,150 @@
-{"Sim Select": 0, "Plot Select": 0, "f_0x": 0, "f_0y": 0, "Ncycx": 0, "Ncycy": 0, "F_x": 0, "F_y": 0, "t1": 0, "t2": 0, "L": 0, "Aeff": 0, "BPF": 0, "TDn": 0, "Delt1": 0, "Delt2": 0, "ORD": 0, "N": 100, "Mat": "SiO2"}
+deleteall;
+####################################################
+# Rounded rectangle
+# Rectangular structure with all edges and corners rounded. 
+#
+# Input properties
+# index: refractive index of dieletric
+# material: material of sturcture
+# radius: radius of rounded edges
+# x span, y span, z span: dimensions of structure
+# 
+# Tags: polygon extrusion rounded corner edges quadrilateral
+# 
+# Copyright 2010 Lumerical Solutions Inc
+#####################################################
+# simplify variable names by removing spaces
+x_span = %x span%;
+y_span = %y span%;
+z_span = %z span%;
+RB     = %RoundedBot%;
+dSep   = %separation%;
+DNum   = %NoDeflectors%;
+mat    = %material%;
+NWRad  = %NWRad%; 	
+radius = %roundingradius%;
+radius2 = radius;
+if(x_span<2*radius){
+    radius = 0.5*z_span;
+}
+for(q=1:DNum){
+	addstructuregroup;
+	set("name","Relay"+num2str(q));
+	# co-ordinates of the eight corners
+	x=[NWRad+dSep*q-x_span/2+radius,NWRad+dSep*q+x_span/2-radius];
+	y=[-y_span/2+radius,y_span/2-radius];
+	z=[radius,z_span+radius];
+
+	zcen = (z(1) + z(2))/2;
+	rot=[-90,90];
+
+	# center rectangle + top piece
+	addrect;
+	 set("x",NWRad+q*dSep);
+	 set("y",0);
+	 set("z",zcen);
+	 set("x span",x_span-2*radius);
+	 set("y span",y_span-2*radius);
+	 set("z span",z_span+2*radius);
+	 addtogroup("Relay"+num2str(q));
+	 
+	 
+	for(i=1:2) {
+	   addrect;
+	   set("x",x(i));
+	   set("y",0);
+	   addtogroup("Relay"+num2str(q));
+	   if(RB==0){
+		   set("z",zcen-radius/2);
+		   set("z span",z_span+radius);
+		 }
+	   if(RB==1){
+		   set("z",zcen);
+		   set("z span",z_span);
+		 }
+	   set("x span",2*radius);
+	   set("y span",y_span-2*radius);
+	  addrect;
+	   set("x",NWRad+dSep*q);
+	   set("y",y(i));
+	   addtogroup("Relay"+num2str(q));
+	   if(RB==0){
+		   set("z",zcen-radius/2);
+		   set("z span",z_span+radius);
+		 }
+	   if(RB==1){
+		   set("z",zcen);
+		   set("z span",z_span);
+		 }
+	   set("x span",x_span-2*radius);
+	   set("y span",2*radius);
+
+	  for(j=1:2) {
+		# top rounded edges
+		addcircle;
+		 set("make ellipsoid",1);
+		 set("z span",y_span-2*radius);
+		 set("radius",radius);
+		 set("radius 2",radius2);
+		 set("x",x(i));
+		 set("y",0);
+		 set("first axis","x");
+		 set("rotation 1",rot(j));
+		 set("z",z(j));
+		 addtogroup("Relay"+num2str(q));
+		 
+		 addcircle;
+		 set("make ellipsoid",1);
+		 set("x",NWRad+dSep*q);
+		 set("z span",x_span-2*radius);
+		 set("radius",radius);
+		 set("radius 2",radius2);
+		 set("y",y(i));
+		 set("first axis","y");
+		 set("rotation 1",rot(j));
+		 set("z",z(j));
+		 addtogroup("Relay"+num2str(q));
+		# side rounded edges
+		if(RB==0){
+		 addcircle;
+		 set("make ellipsoid",1);
+		 set("z span",z_span+radius);  
+		 set("z",zcen-radius/2);
+		 set("radius",radius);
+		 set("radius 2",radius2);
+		 set("x",x(i));
+		 set("y",y(j));
+		 addtogroup("Relay"+num2str(q));}
+	   
+		if(RB==1){
+		 addcircle;
+		 set("make ellipsoid",1);
+		 set("z span",z_span);  
+		 set("z",zcen);
+		 set("radius",radius);
+		 set("radius 2",radius2);
+		 set("x",x(i));
+		 set("y",y(j));
+		 addtogroup("Relay"+num2str(q));     
+		 }     
+		 
+		for(k=1:2) {
+		  # rounded corners
+		   addsphere;
+		   set("make ellipsoid",1);
+		   set("z",z(k));
+		   set("radius",radius);
+		   set("radius 2",radius);
+		   set("radius 3",radius2);
+		   set("x",x(i));
+		   set("y",y(j));
+		   addtogroup("Relay"+num2str(q));
+		}  
+	  }
+	}
+}
+# material for group object
+for(j=1:DNum){
+    selectpartial("Relay"+num2str(j)+"::");
+    set("material",mat);
+    }
