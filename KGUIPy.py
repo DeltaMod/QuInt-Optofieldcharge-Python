@@ -506,7 +506,7 @@ class KGUI:
 
              elif  self.VAR_Plot_Select.get()   == self.PLTSEL[1][2]: #2 - 'E_t Final Applied Dispersion'  
                  #xlabel('Time [fs]');  ylabel('Amplitude')
-                 self.Graph_Plotter(self.Res_t,self.Res_Et,'\omega [rad/s]','Amplitude',None,None)
+                 self.Graph_Plotter(self.Res_Estr.t,self.Res_Et,'\omega [rad/s]','Amplitude',None,None)
                  pass
              elif  self.VAR_Plot_Select.get()   ==   self.PLTSEL[1][3]: # 3 - 'E_t(t)^2n+1 After Dispersion' 
                  #xlabel('Optical Cycle $\left(\frac{t-t_0}{T}\right)$'); ylabel('Vector Potential (and $a^{2n+1}$)')
